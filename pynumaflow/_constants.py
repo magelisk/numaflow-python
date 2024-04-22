@@ -57,6 +57,7 @@ class UDFType(str, Enum):
     """
 
     Map = "map"
+    MapBatch = "mapbatch"
     Reduce = "reduce"
     Sink = "sink"
     Source = "source"

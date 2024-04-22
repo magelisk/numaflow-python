@@ -22,6 +22,7 @@ from pynumaflow.info.types import (
     MINIMUM_NUMAFLOW_VERSION,
 )
 from pynumaflow.proto.mapper import map_pb2_grpc
+from pynumaflow.proto.mapbatch import mapbatch_pb2_grpc
 from pynumaflow.proto.sideinput import sideinput_pb2_grpc
 from pynumaflow.proto.sinker import sink_pb2_grpc
 from pynumaflow.proto.sourcer import source_pb2_grpc
@@ -109,6 +110,8 @@ def _run_server(
     # add the correct servicer to the server based on the UDF type
     if udf_type == UDFType.Map:
         map_pb2_grpc.add_MapServicer_to_server(servicer, server)
+    elif udf_type == UDFType.MapBatch:
+        mapbatch_pb2_grpc.add_MapBatchServicer_to_server(servicer, server)
     elif udf_type == UDFType.Sink:
         sink_pb2_grpc.add_SinkServicer_to_server(servicer, server)
     elif udf_type == UDFType.SourceTransformer:
