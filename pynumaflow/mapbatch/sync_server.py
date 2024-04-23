@@ -9,7 +9,7 @@ from pynumaflow._constants import (
     _LOGGER,
     MAP_SOCK_PATH,
     UDFType,
-    MAP_SERVER_INFO_FILE_PATH,
+    MAP_BATCH_SERVER_INFO_FILE_PATH,
 )
 
 from pynumaflow.mapbatch._dtypes import MapBatchSyncCallable
@@ -66,7 +66,7 @@ class MapBatchServer(NumaflowServer):
         sock_path=MAP_SOCK_PATH,
         max_message_size=MAX_MESSAGE_SIZE,
         max_threads=MAX_THREADS,
-        server_info_file=MAP_SERVER_INFO_FILE_PATH,
+        server_info_file=MAP_BATCH_SERVER_INFO_FILE_PATH,
     ):
         """
         Create a new grpc Synchronous Map Server instance.
