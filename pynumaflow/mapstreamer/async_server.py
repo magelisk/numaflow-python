@@ -114,13 +114,19 @@ class MapStreamAsyncServer(NumaflowServer):
         # same thread as the event loop so that all the async calls are made in the
         # same context
         # Create a new async server instance and add the servicer to it
+        print(1)
         server = grpc.aio.server()
+        print(2)
         server.add_insecure_port(self.sock_path)
+        print(3)
         mapstream_pb2_grpc.add_MapStreamServicer_to_server(
             self.servicer,
             server,
         )
+        print(4)
         _LOGGER.info("Starting Map Stream Server")
+        print(5)
         await start_async_server(
             server, self.sock_path, self.max_threads, self._server_options, self.server_info_file
         )
+        print(6)

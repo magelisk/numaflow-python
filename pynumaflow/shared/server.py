@@ -199,7 +199,9 @@ async def start_async_server(
     Add the server graceful shutdown coroutine to the cleanup_coroutines list.
     Wait for the server to terminate.
     """
+    print(11)
     await server_async.start()
+    print(12)
 
     # Add the server information to the server info file
     serv_info = ServerInfo(
@@ -208,7 +210,9 @@ async def start_async_server(
         minimum_numaflow_version=MINIMUM_NUMAFLOW_VERSION,
         version=get_sdk_version(),
     )
+    print(13)
     info_server_write(server_info=serv_info, info_file=server_info_file)
+    print(14)
 
     # Log the server start
     _LOGGER.info(
@@ -216,7 +220,7 @@ async def start_async_server(
         sock_path,
         max_threads,
     )
-
+    print(14)
     async def server_graceful_shutdown():
         """
         Shuts down the server with 5 seconds of grace period. During the
