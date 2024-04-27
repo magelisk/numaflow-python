@@ -41,15 +41,6 @@ message MapStreamResponse {
   Result result = 1;
 }
 
-// message MapStreamResponseBatch {
-//   message Result {
-//     repeated string keys = 1;
-//     bytes value = 2;
-//     repeated string tags = 3;
-//   }
-//   repeated Result results = 1;
-// }
-
 /**
  * ReadyResponse is the health check result.
  */

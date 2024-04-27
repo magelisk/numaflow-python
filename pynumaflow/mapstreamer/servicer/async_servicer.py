@@ -71,7 +71,6 @@ class AsyncMapStreamServicer(mapstream_pb2_grpc.MapStreamServicer):
         Applies a map function to a datum stream in streaming mode.
         The pascal case function name comes from the proto mapstream_pb2_grpc.py file.
         """
-        print("ACK, got originall MapStreamFn")
         async for res in self.__invoke_map_stream(
             list(request.keys),
             Datum(
@@ -113,31 +112,18 @@ class AsyncMapStreamServicer(mapstream_pb2_grpc.MapStreamServicer):
         Applies a sink function to a list of datum elements.
         The pascal case function name comes from the proto sink_pb2_grpc.py file.
         """
-        # if there is an exception, we will mark all the responses as a failure
-        print("Call datum_generator")
         datum_iterator = datum_generator(request_iterator=request_iterator)
-        print("Call __invoke_stream_batch")
-        # results = await self.__invoke_stream_batch(datum_iterator)
+        
         try:
             async for msg in self.__invoke_stream_batch(datum_iterator):
-                print(f"Yield back: {msg=}")
                 yield msg
         except Exception as err:
             _LOGGER.critical("UDFError, re-raising the error", exc_info=True)
             raise err
     
-        print("MDW Return from MapStreamBatchFn")
-        # print(f"Return results {results=}")
-
-        # # return mapstream_pb2.MapStreamResponse(results=results)
-        # async for res in results:
-        #     yield res
-
     async def __invoke_stream_batch(self, datum_iterator: AsyncIterable[Datum]):
         try:
-            print("call self.__map_stream_handler.handler_stream")
             async for msg in self.__map_stream_handler.handler_stream(datum_iterator):
-                print(f"{msg=}")
                 yield mapstream_pb2.MapStreamResponse(
                     result=mapstream_pb2.MapStreamResponse.Result(
                         keys=msg.keys, value=msg.value, tags=msg.tags
@@ -149,6 +135,3 @@ class AsyncMapStreamServicer(mapstream_pb2_grpc.MapStreamServicer):
             
             async for _datum in datum_iterator:
                 yield mapstream_pb2.MapStreamResponse(mapstream_pb2.MapStreamResponse.Result.as_failure(_datum.id, err_msg))
-
-        # return rspns
-        # return to_ret
