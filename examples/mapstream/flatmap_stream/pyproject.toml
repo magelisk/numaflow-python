@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "map-batch-stream"
+name = "map-flatmap-stream"
 version = "0.2.4"
 description = ""
 authors = ["Numaflow developers"]
