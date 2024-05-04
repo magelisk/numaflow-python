@@ -5,7 +5,7 @@ description = ""
 authors = ["Numaflow developers"]
 
 [tool.poetry.dependencies]
-python = "~3.10"
+python = "~3.12"
 pynumaflow = { path = "./dist/pynumaflow.tar.gz"}
 
 [tool.poetry.dev-dependencies]
