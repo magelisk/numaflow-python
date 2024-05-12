@@ -69,7 +69,7 @@ class MapperStreamer(MapStreamer):
         #     result = np.fft.fft(arr)
         #     yield Message(value=result.tobytes(), tags=["grouped"])
 
-
+        '''
         print(f"{time.time():0.2f} Mulitple form")
         batch = []
         # idx = 0
@@ -83,9 +83,34 @@ class MapperStreamer(MapStreamer):
         result = np.fft.fft(np.array(batch))
         # print("Return group")
         yield Message(value=result.tobytes(), tags=["grouped"])
+        '''
+
+        async for msg in datum:
+            parsed = json.loads(msg.value.decode())
+            val = hash(parsed["Data"]["padding"])
+            base64.b64decode(parsed["Data"]["padding"])
+            
+            as_str = str(val)
+            all_grouped.append(val)
+            # print(f"Computed message value = {as_str}")
+
+            last_int = int(as_str[-1])
+            if last_int == 0:
+                # print(f"Drop {as_str}")
+                yield Message.to_drop()
+                continue
+
+            if last_int % 2 == 0:
+                output_keys = ["even"]
+                output_tags = ["even-tag"]
+            else:
+                output_keys = ["odd"]
+                output_tags = ["odd-tag"]
+            yield Message(value=as_str.encode("utf-8"), keys=output_keys, tags=output_tags)        
 
 if __name__ == "__main__":
     # NOTE: stream handler does currently support function-only handler
+    print("Stream")
     handler = MapperStreamer()
     grpc_server = MapStreamAsyncServer(handler)
     grpc_server.start()

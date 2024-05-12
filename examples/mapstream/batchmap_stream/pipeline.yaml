@@ -11,14 +11,47 @@ spec:
         generator:
           # How many messages to generate in the duration.
           # rpu: 5000
-          rpu: 5000
+          rpu: 2000
           duration: 1s
           # Optional, size of each generated message, defaults to 10.
           msgSize: 1024
-    - name: even-or-odd
+    # - name: even-or-odd-stream
+    #   metadata:
+    #     annotations:
+    #       numaflow.numaproj.io/map-stream: "true"
+    #   limits:
+    #     # Keeps batched result under 1MB
+    #     readBatchSize: 50
+    #   scale:
+    #     disabled: true
+    #   # limits:
+    #   #   readBatchSize: 1
+    #   udf:
+    #     container:
+    #       imagePullPolicy: Never
+    #       image: "quay.io/numaio/numaflow-python/map-batch-stream:stable"
+    #       env:
+    #       - name: MAX_THREADS
+    #         value: "1"
+    #       - name: PYTHONUNBUFFERED
+    #         value: "1"
+    #       - name: SLEEP_TIME_SEC
+    #         value: "0"
+    #       resources: &resources
+    #         requests:
+    #           cpu: 1
+    #           memory: 1Gi
+    #         limits:
+    #           cpu: 1
+    #           memory: 1Gi
+    #   containerTemplate:
+    #     resources:
+    #       <<: *resources
+
+    - name: even-or-odd-urnary
       metadata:
-        annotations:
-          numaflow.numaproj.io/map-stream: "true"
+        # annotations:
+        #   numaflow.numaproj.io/map-stream: "true"
       limits:
         # Keeps batched result under 1MB
         readBatchSize: 50
@@ -30,6 +63,9 @@ spec:
         container:
           imagePullPolicy: Never
           image: "quay.io/numaio/numaflow-python/map-batch-stream:stable"
+          command:
+          - python
+          - example_map_urnary.py
           env:
           - name: MAX_THREADS
             value: "1"
@@ -47,6 +83,7 @@ spec:
       containerTemplate:
         resources:
           <<: *resources
+
     - name: even-sink
       scale:
         min: 1
@@ -68,25 +105,46 @@ spec:
         log: {}
       
   edges:
+    # - from: in
+    #   to: even-or-odd-stream
+    # - from: even-or-odd-stream
+    #   to: even-sink
+    #   conditions:
+    #     tags:
+    #       values:
+    #         - even-tag
+    # - from: even-or-odd-stream
+    #   to: odd-sink
+    #   conditions:
+    #     tags:
+    #       operator: or
+    #       values:
+    #         - odd-tag
+    # - from: even-or-odd-stream
+    #   to: number-sink
+    #   conditions:
+    #     tags:
+    #       values:
+    #         - grouped
+
     - from: in
-      to: even-or-odd
-    - from: even-or-odd
+      to: even-or-odd-urnary
+    - from: even-or-odd-urnary
       to: even-sink
       conditions:
         tags:
           values:
             - even-tag
-    - from: even-or-odd
+    - from: even-or-odd-urnary
       to: odd-sink
       conditions:
         tags:
           operator: or
           values:
             - odd-tag
-    - from: even-or-odd
+    - from: even-or-odd-urnary
       to: number-sink
       conditions:
         tags:
           values:
             - grouped
-
