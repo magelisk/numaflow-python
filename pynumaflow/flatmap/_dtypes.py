@@ -103,7 +103,6 @@ class Datum:
     """
     Class to define the important information for the event.
     Args:
-        uuid: Unique ID of this input message, used for tracking event through map handling
         keys: the keys of the event.
         value: the payload of the event.
         event_time: the event time of the event.
@@ -118,7 +117,6 @@ class Datum:
     >>> t2 = datetime.fromtimestamp(1662998460, timezone.utc)
     >>> msg_headers = {"key1": "value1", "key2": "value2"}
     >>> d = Datum(
-    ...       uuid="asdf",
     ...       keys=["test_key"],
     ...       value=payload,
     ...       event_time=t1,
@@ -127,9 +125,8 @@ class Datum:
     ...    )
     """
 
-    __slots__ = ("_uuid", "_keys", "_value", "_event_time", "_watermark", "_headers")
+    __slots__ = ("_keys", "_value", "_event_time", "_watermark", "_headers")
 
-    _uuid: str
     _keys: list[str]
     _value: bytes
     _event_time: datetime
@@ -142,10 +139,8 @@ class Datum:
         value: bytes,
         event_time: datetime,
         watermark: datetime,
-        uuid: str,
         headers: Optional[dict[str, str]] = None,
     ):
-        self._uuid = uuid
         self._keys = keys or list()
         self._value = value or b""
         if not isinstance(event_time, datetime):
@@ -159,11 +154,6 @@ class Datum:
     def keys(self) -> list[str]:
         """Returns the keys of the event"""
         return self._keys
-
-    @property
-    def uuid(self) -> str:
-        """Returns UUID of the message"""
-        return self._uuid
 
     @property
     def value(self) -> bytes:
@@ -201,15 +191,9 @@ class MapStreamer(metaclass=ABCMeta):
         """
         return self.handler(*args, **kwargs)
 
-    @abstractmethod
-    async def handler(self, keys: list[str], datum: Datum) -> AsyncIterable[Message]:
-        """
-        Implement this handler function which implements the MapSyncCallable interface.
-        """
-        pass
 
     @abstractmethod
-    async def handler_stream(self, datum: AsyncIterable[Datum]) -> AsyncIterable[Message]:
+    async def handler(self, datum: AsyncIterable[Datum]) -> AsyncIterable[Message]:
         """
         Implement this handler function which implements the MapSyncCallable interface.
         """

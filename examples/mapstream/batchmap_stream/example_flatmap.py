@@ -4,9 +4,11 @@ import time
 import json
 import base64
 from collections.abc import AsyncIterable
-# from pynumaflow.mapstreamer import Message, Datum, MapStreamAsyncServer, MapStreamer
-from pynumaflow.mapstreamer import Message, Datum, MapStreamAsyncServer
-from pynumaflow.mapstreamer.servicer.servicers import StreamFlatMap, StreamBatchMap
+# from pynumaflow.mapstreamer import Message, Datum, MapStreamAsyncServer
+# from pynumaflow.mapstreamer.servicer.servicers import StreamFlatMap, StreamBatchMap
+from pynumaflow.flatmap import Message, Datum, MapStreamAsyncServer
+from pynumaflow.flatmap.servicer.servicers import StreamFlatMap, StreamBatchMap
+
 import numpy as np
 
 SLEEP_TIME = int(os.environ.get("SLEEP_TIME_SEC", "1"))

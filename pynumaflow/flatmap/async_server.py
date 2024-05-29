@@ -5,14 +5,14 @@ import grpc
 from grpc import experimental
 
 from pynumaflow.mapstreamer.servicer.async_servicer import AsyncMapStreamServicer
-from pynumaflow.proto.mapstreamer import mapstream_pb2_grpc
+from pynumaflow.proto.flatmap import flatmap_pb2_grpc
 
 from pynumaflow._constants import (
-    MAP_STREAM_SOCK_PATH,
+    FLAT_MAP_SOCK_PATH,
     MAX_MESSAGE_SIZE,
     MAX_THREADS,
     _LOGGER,
-    MAP_STREAM_SERVER_INFO_FILE_PATH,
+    FLAT_MAP_SERVER_INFO_FILE_PATH,
 )
 
 from pynumaflow.mapstreamer._dtypes import MapStreamCallable
@@ -20,7 +20,7 @@ from pynumaflow.mapstreamer._dtypes import MapStreamCallable
 from pynumaflow.shared.server import NumaflowServer, start_async_server
 
 
-class MapStreamAsyncServer(NumaflowServer):
+class FlatmapAsyncServer(NumaflowServer):
     """
     Class for a new Map Stream Server instance.
     """
@@ -28,10 +28,10 @@ class MapStreamAsyncServer(NumaflowServer):
     def __init__(
         self,
         map_stream_instance: MapStreamCallable,
-        sock_path=MAP_STREAM_SOCK_PATH,
+        sock_path=FLAT_MAP_SOCK_PATH,
         max_message_size=MAX_MESSAGE_SIZE,
         max_threads=MAX_THREADS,
-        server_info_file=MAP_STREAM_SERVER_INFO_FILE_PATH,
+        server_info_file=FLAT_MAP_SERVER_INFO_FILE_PATH,
         servicer_class=AsyncMapStreamServicer,
     ):
         """
@@ -105,6 +105,7 @@ class MapStreamAsyncServer(NumaflowServer):
         Starter function for the Async Map Stream server, we need a separate caller
         to the aexec so that all the async coroutines can be started from a single context
         """
+        print("MDW: Calling FlatmapAsyncServer.start")
         aiorun.run(self.aexec(), use_uvloop=True)
 
     async def aexec(self):
@@ -116,13 +117,17 @@ class MapStreamAsyncServer(NumaflowServer):
         # same thread as the event loop so that all the async calls are made in the
         # same context
         # Create a new async server instance and add the servicer to it
+        print("MDW: grpc.aio.server")
         server = grpc.aio.server()
+        print(f"MDW: {self.sock_path}")
         server.add_insecure_port(self.sock_path)
-        mapstream_pb2_grpc.add_MapStreamServicer_to_server(
+        print(f"MDW: add_MapStreamServicer_to_server")
+        flatmap_pb2_grpc.add_FlatmapServicer_to_server(
             self.servicer,
             server,
         )
-        _LOGGER.info("Starting Map Stream Server")
+        _LOGGER.info("Starting Flatmap Server")
+        print("MDW: Starting Flatmap Server")
         await start_async_server(
             server, self.sock_path, self.max_threads, self._server_options, self.server_info_file
         )

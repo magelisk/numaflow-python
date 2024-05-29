@@ -1,5 +1,5 @@
 from collections.abc import AsyncIterable
-
+import asyncio
 from google.protobuf import empty_pb2 as _empty_pb2
 
 from pynumaflow.mapstreamer import Datum
@@ -37,8 +37,11 @@ class AsyncMapStreamServicer(mapstream_pb2_grpc.MapStreamServicer):
     def __init__(
         self,
         handler: MapStreamCallable,
+        max_in_progress: int = 10,
     ):
         self.__map_stream_handler: MapStreamCallable = handler
+
+        self._sema = asyncio.Semaphore(max_in_progress)
 
     async def MapStreamFn(
         self,
@@ -80,6 +83,7 @@ class AsyncMapStreamServicer(mapstream_pb2_grpc.MapStreamServicer):
         """
         return mapstream_pb2.ReadyResponse(ready=True)
 
+    '''MDW: my pure streaming MR
     async def MapStreamBatchFn(
         self,
         request_iterator: AsyncIterable[mapstream_pb2.MapStreamRequest],
@@ -114,3 +118,49 @@ class AsyncMapStreamServicer(mapstream_pb2_grpc.MapStreamServicer):
                 yield mapstream_pb2.MapStreamResponse(
                     mapstream_pb2.MapStreamResponse.Result.as_failure(_datum.id, err_msg)
                 )
+    '''
+
+    ###
+    # Flatmap example
+    ###
+    async def MapStreamBatchFn(
+        self,
+        request_iterator: AsyncIterable[mapstream_pb2.MapStreamRequest],
+        context: NumaflowServicerContext,
+    ) -> AsyncIterable[mapstream_pb2.MapStreamResponse]:
+        """
+        Flatmap one
+        """
+        _LOGGER.info("MDW: Flatmap handler")
+        datum_iterator = datum_generator(request_iterator=request_iterator)
+
+        try:
+            async for msg in datum_iterator:
+                async for to_ret in self._process_one_flatmap(msg):
+                    yield to_ret
+        except Exception as err:
+            _LOGGER.critical("UDFError, re-raising the error", exc_info=True)
+            raise err
+
+    async def _process_one_flatmap(self, msg: Datum):
+        # msg_id = msg.msg_id
+
+        try:
+            results = []
+            # async for result in self.__map_stream_handler.handler_stream(msg):
+            async for result in self.__map_stream_handler.handler(msg.keys, msg):
+                results.append(result)
+
+            # We intentially store results and send at completion of callback to ensure no partial returns
+            for result in results:
+                yield mapstream_pb2.MapStreamResponse(
+                    result=mapstream_pb2.MapStreamResponse.Result(
+                        keys=result.keys, value=result.value, tags=result.tags  # MDW:
+                    )
+                )
+
+            # TODO: Send completion message for given msg_id
+        except Exception as err:
+            err_msg = "UDFError, re-raising the error: %r" % err
+            _LOGGER.critical(err_msg, exc_info=True)
+            raise err
