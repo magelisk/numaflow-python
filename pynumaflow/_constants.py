@@ -17,8 +17,10 @@ SIDE_INPUT_SOCK_PATH = "/var/run/numaflow/sideinput.sock"
 SOURCE_SOCK_PATH = "/var/run/numaflow/source.sock"
 MULTIPROC_MAP_SOCK_ADDR = "/var/run/numaflow/multiproc"
 FALLBACK_SINK_SOCK_PATH = "/var/run/numaflow/fb-sink.sock"
+FLAT_MAP_SOCK_PATH = "/var/run/numaflow/flatmap.sock"
 
 # Server information file configs
+FLAT_MAP_SERVER_INFO_FILE_PATH = "/var/run/numaflow/flatmap-server-info"
 MAP_SERVER_INFO_FILE_PATH = "/var/run/numaflow/mapper-server-info"
 MAP_STREAM_SERVER_INFO_FILE_PATH = "/var/run/numaflow/mapstreamer-server-info"
 REDUCE_SERVER_INFO_FILE_PATH = "/var/run/numaflow/reducer-server-info"
