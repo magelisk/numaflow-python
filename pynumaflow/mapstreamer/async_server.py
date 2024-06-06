@@ -2,7 +2,6 @@ import os
 
 import aiorun
 import grpc
-from grpc import experimental
 
 from pynumaflow.mapstreamer.servicer.async_servicer import AsyncMapStreamServicer
 from pynumaflow.proto.mapstreamer import mapstream_pb2_grpc
@@ -32,7 +31,6 @@ class MapStreamAsyncServer(NumaflowServer):
         max_message_size=MAX_MESSAGE_SIZE,
         max_threads=MAX_THREADS,
         server_info_file=MAP_STREAM_SERVER_INFO_FILE_PATH,
-        servicer_class=AsyncMapStreamServicer,
     ):
         """
         Create a new grpc Async Map Stream Server instance.
@@ -98,7 +96,7 @@ class MapStreamAsyncServer(NumaflowServer):
             ("grpc.max_receive_message_length", self.max_message_size),
         ]
 
-        self.servicer = servicer_class(handler=self.map_stream_instance)
+        self.servicer = AsyncMapStreamServicer(handler=self.map_stream_instance)
 
     def start(self):
         """
