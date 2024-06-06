@@ -134,16 +134,12 @@ class FlatMapBatchMapServer(FlatmapServicerBase):
 
         keep_going = True
         next_awaiting = None
-        print("MDW: batch:present_data GPT")
         async def fetch_next_datum():
             nonlocal keep_going
             nonlocal next_awaiting
             try:
-                print(1)
                 if next_awaiting is None:
-                    print(1.1)
                     next_awaiting = asyncio.ensure_future(datum_iterator.__anext__())
-                    print(1.2)
 
                 item = await asyncio.wait_for(
                     asyncio.shield(next_awaiting),
@@ -153,43 +149,26 @@ class FlatMapBatchMapServer(FlatmapServicerBase):
                 return item
                 # return await asyncio.wait_for(datum_iterator.__anext__(), timeout)
             except asyncio.TimeoutError:
-                print(2)
                 return None
             except StopAsyncIteration:
-                print(3)
                 keep_going = False
                 return None
-
-        # async def fetch_next_datum():
-        #     nonlocal keep_going
-        #     try:
-        #         print(f"{time.time()} 1")
-        #         x=  await anext(datum_iterator)
-        #         print(f"{time.time()} 1.1")
-        #         return x
-        #     except asyncio.TimeoutError:
-        #         print(2)
-        #         return None
-        #     except StopAsyncIteration:
-        #         print(3)
-        #         keep_going = False
-        #         return None
             
         while keep_going:
-            print("MDW: START fetch_next_datum")
+            # print("MDW: START fetch_next_datum")
             datum = await fetch_next_datum()
-            print(f"MDW: DONE fetch_next_datum with {datum=}")
+            # print(f"MDW: DONE fetch_next_datum with {datum=}")
             if datum:
                 buffer.append(datum)
                 if len(buffer) >= batch_size:
-                    print("MDW: Process because full")
+                    # print("MDW: Process because full")
                     async for message in self._process_stream_map(buffer):
                         yield message
                     buffer.clear()
                     start_time = datetime.now()
             else:
                 if buffer:
-                    print("MDW: Process because timeout but no data")
+                    # print("MDW: Process because timeout but no data")
                     async for message in self._process_stream_map(buffer):
                         yield message
                     buffer.clear()
@@ -197,16 +176,14 @@ class FlatMapBatchMapServer(FlatmapServicerBase):
 
             # Check if the timeout has been exceeded
             if (datetime.now() - start_time).total_seconds() >= timeout:
-                print("MDW: What happens here?")
+                # print("MDW: What happens here?")
                 if buffer:
-                    print("   MDW: Finish processing final messages")
+                    # print("   MDW: Finish processing final messages")
                     async for message in self._process_stream_map(buffer):
                         yield message
                     buffer.clear()
                     start_time = datetime.now()
 
-            # if datum is None and not buffer:
-            #     break
 
     async def _process_stream_map(self, msgs_deque: deque[Datum]):
         msgs = [msg for msg in msgs_deque]
