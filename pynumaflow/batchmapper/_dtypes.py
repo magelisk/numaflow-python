@@ -243,7 +243,7 @@ class BatchResponses(Sequence[B]):
     def __iter__(self) -> Iterator[B]:
         return iter(self._responses)
 
-    def __getitem__(self, index: int) -> M:
+    def __getitem__(self, index: int) -> B:
         if isinstance(index, slice):
             raise TypeError("Slicing is not supported for BatchResponses")
         return self._responses[index]

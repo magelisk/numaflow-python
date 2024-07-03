@@ -1,7 +1,36 @@
 import unittest
 
-from pynumaflow.reducestreamer import Message, DROP
+from pynumaflow.batchmapper import BatchResponse, BatchResponses
+from pynumaflow.batchmapper import Message, DROP
 from tests.testing_utils import mock_message
+
+
+class TestBatchResponse(unittest.TestCase):
+    def test_invalid_create(self):
+        with self.assertRaises(TypeError):
+            BatchResponse.new_batch_response()
+
+    def test_id(self):
+        msg = BatchResponse.new_batch_response("4")
+        self.assertEqual("4", msg.id())
+
+    def test_append(self):
+        mock_obj = {"Keys": ["test-key"], "Value": mock_message()}
+        batch_response = BatchResponse.new_batch_response("4")
+        msg = Message(value=mock_obj["Value"], keys=mock_obj["Keys"])
+        batch_response.append(msg)
+        self.assertEqual(1, len(batch_response.items()))
+
+
+class TestBatchResponses(unittest.TestCase):
+    def test_append(self):
+        mock_obj = {"Keys": ["test-key"], "Value": mock_message()}
+        batch_response = BatchResponse.new_batch_response("4")
+        msg = Message(value=mock_obj["Value"], keys=mock_obj["Keys"])
+        batch_response.append(msg)
+        batch_responses = BatchResponses()
+        batch_responses.append(batch_response)
+        self.assertEqual(1, len(batch_responses.items()))
 
 
 class TestMessage(unittest.TestCase):
