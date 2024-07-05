@@ -28,18 +28,34 @@ async def datum_generator(
         yield datum
 
 
-class AsyncBatchMapServicerBase(batchmap_pb2_grpc.BatchMapServicer):
+class BatchMapServicer(batchmap_pb2_grpc.BatchMapServicer):
     """
-    This class is used to create a new grpc Async Map Servicer instance.
-    It implements the SyncMapServicer interface from the proto map.proto file.
-    Provides the functionality for the required rpc methods.
+    This class is used to create a new grpc Batch Map Servicer instance.
+    It implements the SyncMapServicer interface from the proto batch map.proto file.
+
+    This is the core servicer and the default implementation will function on a handler
+    taking an async iterable to handle messages as deemed fit by the handler. The incoming
+    data is unbounded at the SDK level is is limited by message retrieval semantics on
+    numa sidecar, so the handler must be aware of how to appropriately manage number of
+    messages in-flight at once.
+
+    This class is designed to enable different access patterns with inheritance. This can
+    be useful to build consistent data access ability across different applications.
+    In order to use this, the class being used must be provided to the BatchMapAsyncServer
+    for initialization.    
+
+    class OtherImpl(BaseMapServicer):
+        async def present_data(self, datum_iterator: AsyncIterable[Datum])
+            -> AsyncIterable[batchmap_pb2.BatchMapResponse]:
+            ... # manage data here
+    
     """
 
     def __init__(
         self,
         handler: MapBatchAsyncHandlerCallable,
     ):
-        self.__map_batch_handler: MapBatchAsyncHandlerCallable = handler
+        self._handler: MapBatchAsyncHandlerCallable = handler
 
 
     async def IsReady(
@@ -63,16 +79,17 @@ class AsyncBatchMapServicerBase(batchmap_pb2_grpc.BatchMapServicer):
         datum_iterator = datum_generator(request_iterator=request_iterator)
 
         try:
-            async for msg in self.__invoke_stream_batch(datum_iterator):
+            # async for msg in self.__invoke_stream_batch(datum_iterator):
+            async for msg in self.present_data(datum_iterator):
                 yield msg
         except Exception as err:
             _LOGGER.critical("UDFError, re-raising the error", exc_info=True)
             raise err
 
-    async def __invoke_stream_batch(self, datum_iterator: AsyncIterable[Datum]):
+    async def present_data(self, datum_iterator: AsyncIterable[Datum]) -> AsyncIterable[batchmap_pb2.BatchMapResponse]:
         try:
             
-            async for response_msgs in self.__map_batch_handler.handler(datum_iterator):
+            async for response_msgs in self._handler.handler(datum_iterator):
                 # Implicitly ensure we have a list
                 yield batchmap_pb2.BatchMapResponse(
                     results=[batchmap_pb2.BatchMapResponse.Result(
@@ -90,13 +107,12 @@ class AsyncBatchMapServicerBase(batchmap_pb2_grpc.BatchMapServicer):
                 )
 
 #----
-class StreamFlatMap(AsyncBatchMapServicerBase):
-    """Operates a async-asynchronus unary style prentation. Does not provide batching,
+class BatchMapUnaryServicer(BatchMapServicer):
+    """Operates a async-mapper unary style prentation. Does not provide batching,
     but a streamlined interface for individual message handling that can be used in place of `mapper.MapAsyncServer`"""
     async def present_data(
         self,
         datum_iterator: AsyncIterable[Datum],
-        context: NumaflowServicerContext,
     ) -> AsyncIterable[batchmap_pb2.BatchMapResponse]:
         print("MDW: flatmap:present_data")
         try:
@@ -113,7 +129,7 @@ class StreamFlatMap(AsyncBatchMapServicerBase):
         try:
             results: Message = []
             # async for result in self._map_stream_handler.handler_stream(msg):
-            async for result in self._map_stream_handler.handler(msg.keys, msg):
+            async for result in self._handler.handler(msg.keys, msg):
                 if isinstance(result, Message):
                     results.append(result)
                 else:
@@ -131,30 +147,29 @@ class StreamFlatMap(AsyncBatchMapServicerBase):
             raise err
         
 
-class StreamBatchMap(AsyncBatchMapServicerBase):
+class BatchMapGroupingServicer(BatchMapServicer):
     def __init__(self, 
                  handler: MapBatchAsyncHandlerCallable,
-                 batch_size:int=10):
+                 batch_size:int=10,
+                 timeout_sec: int=5
+                 ):
         super().__init__(handler)
         
         self._batch_size = batch_size
+        self._timeout_sec = timeout_sec
 
     async def present_data(
         self,
         datum_iterator: AsyncIterable[Datum],
-        context: NumaflowServicerContext,
-        batch_size: int = 10,
-        timeout: int = 5
     ) -> AsyncIterable[Message]:
         buffer: deque[Datum] = deque()
         start_time = datetime.now()
 
         keep_going = True
-        # print("MDW: batch:present_data GPT")
         async def fetch_next_datum():
             nonlocal keep_going
             try:
-                return await asyncio.wait_for(datum_iterator.__anext__(), timeout)
+                return await asyncio.wait_for(datum_iterator.__anext__(), self._timeout_sec)
             except asyncio.TimeoutError:
                 return None
             except StopAsyncIteration:
@@ -165,7 +180,7 @@ class StreamBatchMap(AsyncBatchMapServicerBase):
             datum = await fetch_next_datum()
             if datum:
                 buffer.append(datum)
-                if len(buffer) >= batch_size:
+                if len(buffer) >= self._batch_size:
                     # print("MDW: Process because full")
                     async for message in self._process_stream_map(buffer):
                         yield message
@@ -180,7 +195,7 @@ class StreamBatchMap(AsyncBatchMapServicerBase):
                     start_time = datetime.now()
 
             # Check if the timeout has been exceeded
-            if (datetime.now() - start_time).total_seconds() >= timeout:
+            if (datetime.now() - start_time).total_seconds() >= self._timeout_sec:
                 # print("MDW: What happens here?")
                 if buffer:
                     async for message in self._process_stream_map(buffer):
@@ -193,7 +208,7 @@ class StreamBatchMap(AsyncBatchMapServicerBase):
 
     async def _process_stream_map(self, msgs: list[Datum]):
         try:
-            async for response_msgs in self.__map_batch_handler.handler(msgs):
+            async for response_msgs in self._handler.handler(msgs):
                 # Implicitly ensure we have a list
                 yield batchmap_pb2.BatchMapResponse(
                     results=[batchmap_pb2.BatchMapResponse.Result(
@@ -204,11 +219,13 @@ class StreamBatchMap(AsyncBatchMapServicerBase):
         except Exception as err:
             err_msg = "UDSinkError: %r" % err
             _LOGGER.critical(err_msg, exc_info=True)
-
-            async for _datum in msgs:
-                yield batchmap_pb2.BatchMapResponse(
-                    batchmap_pb2.BatchMapResponse.Result.as_failure(_datum.id, err_msg)
-                )
+            try:
+                for _datum in msgs:
+                    yield batchmap_pb2.BatchMapResponse(
+                        batchmap_pb2.BatchMapResponse.Result.as_failure(_datum.id, err_msg)
+                    )
+            except Exception as ex:
+                print(f"{ex=}")
 
         #     results = []
         #     # async for result in self._map_stream_handler.handler_stream(msg):

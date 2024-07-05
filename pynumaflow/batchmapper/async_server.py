@@ -10,7 +10,7 @@ from pynumaflow._constants import (
     MAP_BATCH_SERVER_INFO_FILE_PATH,
 )
 from pynumaflow.batchmapper._dtypes import MapBatchAsyncCallable
-from pynumaflow.batchmapper.servicer.async_servicer import AsyncBatchMapServicerBase
+from pynumaflow.batchmapper.servicer.async_servicer import BatchMapServicer, BatchMapUnaryServicer
 from pynumaflow.proto.batchmapper import batchmap_pb2_grpc
 from pynumaflow.shared.server import (
     NumaflowServer,
@@ -18,7 +18,7 @@ from pynumaflow.shared.server import (
 )
 
 
-class BatchMapAsyncServer(NumaflowServer):
+class BatchMapAsyncServerBase(NumaflowServer):
     """
     Create a new grpc Map Server instance.
     Args:
@@ -47,18 +47,18 @@ class BatchMapAsyncServer(NumaflowServer):
 
     def __init__(
         self,
-        mapper_instance: MapBatchAsyncCallable,
+        servicer: BatchMapServicer,
         sock_path=MAP_BATCH_SOCK_PATH,
         max_message_size=MAX_MESSAGE_SIZE,
         max_threads=MAX_THREADS,
-        server_info_file=MAP_BATCH_SERVER_INFO_FILE_PATH,
+        server_info_file=MAP_BATCH_SERVER_INFO_FILE_PATH
     ):
         """
         Create a new grpc Asynchronous Map Server instance.
         A new servicer instance is created and attached to the server.
         The server instance is returned.
         Args:
-        mapper_instance: The mapper instance to be used for Map UDF
+        servicer: Instantiated servicer to handle messages
         sock_path: The UNIX socket path to be used for the server
         max_message_size: The max message size in bytes the server can receive and send
         max_threads: The max number of threads to be spawned;
@@ -72,14 +72,14 @@ class BatchMapAsyncServer(NumaflowServer):
         print(f"{self.sock_path}")
         print(f"{self.server_info_file}")
 
-        self.mapper_instance = mapper_instance
 
         self._server_options = [
             ("grpc.max_send_message_length", self.max_message_size),
             ("grpc.max_receive_message_length", self.max_message_size),
         ]
         
-        self.servicer = AsyncBatchMapServicerBase(handler=mapper_instance)
+        self.servicer = servicer
+        
 
     def start(self) -> None:
         """
@@ -110,3 +110,27 @@ class BatchMapAsyncServer(NumaflowServer):
             self._server_options,
             self.server_info_file,
         )
+
+class BatchMapServer(BatchMapAsyncServerBase):
+    def __init__(
+        self,
+        mapper_instance: MapBatchAsyncCallable,
+        sock_path=MAP_BATCH_SOCK_PATH,
+        max_message_size=MAX_MESSAGE_SIZE,
+        max_threads=MAX_THREADS,
+        server_info_file=MAP_BATCH_SERVER_INFO_FILE_PATH
+    ):
+        servicer = BatchMapServicer(mapper_instance)
+        super().__init__(servicer, sock_path=sock_path, max_message_size=max_message_size, max_threads=max_threads, server_info_file=server_info_file)
+
+class BatchMapUnaryServer(NumaflowServer):
+    def __init__(
+        self,
+        mapper_instance: MapBatchAsyncCallable,
+        sock_path=MAP_BATCH_SOCK_PATH,
+        max_message_size=MAX_MESSAGE_SIZE,
+        max_threads=MAX_THREADS,
+        server_info_file=MAP_BATCH_SERVER_INFO_FILE_PATH
+    ):
+        servicer = BatchMapUnaryServicer(mapper_instance)
+        super().__init__(servicer, mapper_instance, sock_path=sock_path, max_message_size=max_message_size, max_threads=max_threads, server_info_file=server_info_file)

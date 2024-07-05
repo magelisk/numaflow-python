@@ -1,9 +1,8 @@
 import os
-import time
 import json
 import base64
-from collections.abc import AsyncIterable, Awaitable
-from pynumaflow.batchmapper import Message, Messages, Datum, BatchMapper, BatchMapAsyncServer, BatchResponses
+from collections.abc import AsyncIterable
+from pynumaflow.batchmapper import Message, Messages, Datum, BatchMapper, BatchMapServer, BatchResponses
 
 import numpy as np
 
@@ -14,8 +13,6 @@ def b64_to_array(b64_data):
     return np.frombuffer(data_bytes, dtype=np.uint8) * 1.0j
 
 class MapperStreamer(BatchMapper):
-    # async def handler(self, keys: list[str], datum: Datum) -> AsyncIterable[Message]:
-    #     pass
 
     async def handler(self, datum: AsyncIterable[Datum]) -> AsyncIterable[BatchResponses]:
         """
@@ -60,5 +57,5 @@ if __name__ == "__main__":
     # NOTE: stream handler does currently support function-only handler
     print("Stream")
     handler = MapperStreamer()
-    grpc_server = BatchMapAsyncServer(handler)
+    grpc_server = BatchMapServer(handler)
     grpc_server.start()
