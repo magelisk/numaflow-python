@@ -1,14 +1,16 @@
-# from pynumaflow.mapstreamer import Datum
-# from pynumaflow.proto.mapstreamer import mapstream_pb2
-# from tests.testing_utils import get_time_args, mock_message
+from pynumaflow.batchmapper import Datum
+from pynumaflow.proto.batchmapper import batchmap_pb2
+from tests.testing_utils import get_time_args, mock_message
 
 
-# def start_request_map_stream() -> (Datum, tuple):
-#     event_time_timestamp, watermark_timestamp = get_time_args()
-#     request = mapstream_pb2.MapStreamRequest(
-#         value=mock_message(),
-#         event_time=event_time_timestamp,
-#         watermark=watermark_timestamp,
-#     )
+def generate_request_item(msg_id) -> batchmap_pb2.BatchMapRequest:
+    event_time_timestamp, watermark_timestamp = get_time_args()
+    
+    request = batchmap_pb2.BatchMapRequest(
+        value=mock_message(),
+        event_time=event_time_timestamp,
+        watermark=watermark_timestamp,
+        id=msg_id,
+    )
 
-#     return request
+    yield request

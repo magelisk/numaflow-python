@@ -88,7 +88,7 @@ class BatchMapServicer(batchmap_pb2_grpc.BatchMapServicer):
         self, datum_iterator: AsyncIterable[Datum]
     ) -> AsyncIterable[batchmap_pb2.BatchMapResponse]:
         try:
-            async for response_msgs in self._handler.handler(datum_iterator):
+            async for response_msgs in self._handler(datum_iterator):
                 # Implicitly ensure we have a list
                 yield batchmap_pb2.BatchMapResponse(
                     results=[
@@ -134,7 +134,7 @@ class BatchMapUnaryServicer(BatchMapServicer):
         try:
             results: Message = []
             # async for result in self._map_stream_handler.handler_stream(msg):
-            async for result in self._handler.handler(msg.keys, msg):
+            async for result in self._handler(msg.keys, msg):
                 if isinstance(result, Message):
                     results.append(result)
                 else:
@@ -209,7 +209,7 @@ class BatchMapGroupingServicer(BatchMapServicer):
 
     async def _process_stream_map(self, msgs: list[Datum]):
         try:
-            async for response_msgs in self._handler.handler(msgs):
+            async for response_msgs in self._handler(msgs):
                 # Implicitly ensure we have a list
                 yield batchmap_pb2.BatchMapResponse(
                     results=[
