@@ -2,13 +2,14 @@ from collections.abc import AsyncIterable
 import asyncio
 from google.protobuf import empty_pb2 as _empty_pb2
 from collections import deque
-from datetime import datetime, timedelta
+from datetime import datetime
 
 from pynumaflow.mapstreamer import Datum, Message
 from pynumaflow.mapstreamer._dtypes import MapStreamCallable
 from pynumaflow.proto.mapstreamer import mapstream_pb2_grpc, mapstream_pb2
 from pynumaflow.types import NumaflowServicerContext
 from pynumaflow._constants import _LOGGER
+
 
 async def datum_generator(
     request_iterator: AsyncIterable[mapstream_pb2.MapStreamRequest],
@@ -41,7 +42,6 @@ class AsyncMapStreamServicerBase(mapstream_pb2_grpc.MapStreamServicer):
     ):
         self._map_stream_handler: MapStreamCallable = handler
 
-
     async def MapStreamFn(
         self,
         request: mapstream_pb2.MapStreamRequest,
@@ -49,7 +49,6 @@ class AsyncMapStreamServicerBase(mapstream_pb2_grpc.MapStreamServicer):
     ) -> AsyncIterable[mapstream_pb2.MapStreamResponse]:
         # TODO: Ditch this
         raise NotImplementedError("Gonna get rid of this!")
-
 
     async def IsReady(
         self, request: _empty_pb2.Empty, context: NumaflowServicerContext
@@ -59,7 +58,6 @@ class AsyncMapStreamServicerBase(mapstream_pb2_grpc.MapStreamServicer):
         The pascal case function name comes from the proto mapstream_pb2_grpc.py file.
         """
         return mapstream_pb2.ReadyResponse(ready=True)
-
 
     async def MapStreamBatchFn(
         self,
@@ -82,7 +80,8 @@ class AsyncMapStreamServicerBase(mapstream_pb2_grpc.MapStreamServicer):
         except Exception as err:
             _LOGGER.critical("UDFError, re-raising the error", exc_info=True)
             raise err
-        
+
+
 class StreamFlatMap(AsyncMapStreamServicerBase):
     async def present_data(
         self,
@@ -97,7 +96,7 @@ class StreamFlatMap(AsyncMapStreamServicerBase):
         except Exception as err:
             _LOGGER.critical("UDFError, re-raising the error", exc_info=True)
             raise err
-        
+
     async def _process_one_flatmap(self, msg: Datum):
         # msg_id = msg.msg_id
 
@@ -106,28 +105,26 @@ class StreamFlatMap(AsyncMapStreamServicerBase):
             # async for result in self._map_stream_handler.handler_stream(msg):
             async for result in self._map_stream_handler.handler(msg.keys, msg):
                 results.append(result)
-            
+
             # We intentially store results and send at completion of callback to ensure no partial returns
             for result in results:
                 yield mapstream_pb2.MapStreamResponse(
                     result=mapstream_pb2.MapStreamResponse.Result(
-                        keys=result.keys, value=result.value, tags=result.tags  # MDW: 
+                        keys=result.keys, value=result.value, tags=result.tags  # MDW:
                     )
                 )
-            
+
             # TODO: Send completion message for given msg_id
         except Exception as err:
             err_msg = "UDFError, re-raising the error: %r" % err
             _LOGGER.critical(err_msg, exc_info=True)
             raise err
-        
+
 
 class StreamBatchMap(AsyncMapStreamServicerBase):
-    def __init__(self, 
-                 handler: MapStreamCallable,
-                 batch_size:int=10):
+    def __init__(self, handler: MapStreamCallable, batch_size: int = 10):
         super().__init__(handler)
-        
+
         self._batch_size = batch_size
 
     async def present_data(
@@ -135,12 +132,13 @@ class StreamBatchMap(AsyncMapStreamServicerBase):
         datum_iterator: AsyncIterable[Datum],
         context: NumaflowServicerContext,
         batch_size: int = 10,
-        timeout: int = 5
+        timeout: int = 5,
     ) -> AsyncIterable[Message]:
         buffer: deque[Datum] = deque()
         start_time = datetime.now()
 
         keep_going = True
+
         # print("MDW: batch:present_data GPT")
         async def fetch_next_datum():
             nonlocal keep_going
@@ -151,7 +149,7 @@ class StreamBatchMap(AsyncMapStreamServicerBase):
             except StopAsyncIteration:
                 keep_going = False
                 return None
-            
+
         while keep_going:
             datum = await fetch_next_datum()
             if datum:
@@ -183,22 +181,21 @@ class StreamBatchMap(AsyncMapStreamServicerBase):
             #     break
 
     async def _process_stream_map(self, msgs: list[Datum]):
-
         try:
             results = []
             # async for result in self._map_stream_handler.handler_stream(msg):
             async for result in self._map_stream_handler.handler(msgs):
                 results.append(result)
-            
+
             # We intentially store results and send at completion of callback to ensure no partial returns
             # TOOD: Move this to base class?
             for result in results:
                 yield mapstream_pb2.MapStreamResponse(
                     result=mapstream_pb2.MapStreamResponse.Result(
-                        keys=result.keys, value=result.value, tags=result.tags  # MDW: 
+                        keys=result.keys, value=result.value, tags=result.tags  # MDW:
                     )
                 )
-            
+
             # TODO: Send completion message for given msg_id
         except Exception as err:
             err_msg = "UDFError, re-raising the error: %r" % err

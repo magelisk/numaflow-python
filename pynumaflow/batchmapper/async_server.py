@@ -51,7 +51,7 @@ class BatchMapAsyncServerBase(NumaflowServer):
         sock_path=MAP_BATCH_SOCK_PATH,
         max_message_size=MAX_MESSAGE_SIZE,
         max_threads=MAX_THREADS,
-        server_info_file=MAP_BATCH_SERVER_INFO_FILE_PATH
+        server_info_file=MAP_BATCH_SERVER_INFO_FILE_PATH,
     ):
         """
         Create a new grpc Asynchronous Map Server instance.
@@ -72,14 +72,12 @@ class BatchMapAsyncServerBase(NumaflowServer):
         print(f"{self.sock_path}")
         print(f"{self.server_info_file}")
 
-
         self._server_options = [
             ("grpc.max_send_message_length", self.max_message_size),
             ("grpc.max_receive_message_length", self.max_message_size),
         ]
-        
+
         self.servicer = servicer
-        
 
     def start(self) -> None:
         """
@@ -111,6 +109,7 @@ class BatchMapAsyncServerBase(NumaflowServer):
             self.server_info_file,
         )
 
+
 class BatchMapServer(BatchMapAsyncServerBase):
     def __init__(
         self,
@@ -118,10 +117,17 @@ class BatchMapServer(BatchMapAsyncServerBase):
         sock_path=MAP_BATCH_SOCK_PATH,
         max_message_size=MAX_MESSAGE_SIZE,
         max_threads=MAX_THREADS,
-        server_info_file=MAP_BATCH_SERVER_INFO_FILE_PATH
+        server_info_file=MAP_BATCH_SERVER_INFO_FILE_PATH,
     ):
         servicer = BatchMapServicer(mapper_instance)
-        super().__init__(servicer, sock_path=sock_path, max_message_size=max_message_size, max_threads=max_threads, server_info_file=server_info_file)
+        super().__init__(
+            servicer,
+            sock_path=sock_path,
+            max_message_size=max_message_size,
+            max_threads=max_threads,
+            server_info_file=server_info_file,
+        )
+
 
 class BatchMapUnaryServer(NumaflowServer):
     def __init__(
@@ -130,7 +136,14 @@ class BatchMapUnaryServer(NumaflowServer):
         sock_path=MAP_BATCH_SOCK_PATH,
         max_message_size=MAX_MESSAGE_SIZE,
         max_threads=MAX_THREADS,
-        server_info_file=MAP_BATCH_SERVER_INFO_FILE_PATH
+        server_info_file=MAP_BATCH_SERVER_INFO_FILE_PATH,
     ):
         servicer = BatchMapUnaryServicer(mapper_instance)
-        super().__init__(servicer, mapper_instance, sock_path=sock_path, max_message_size=max_message_size, max_threads=max_threads, server_info_file=server_info_file)
+        super().__init__(
+            servicer,
+            mapper_instance,
+            sock_path=sock_path,
+            max_message_size=max_message_size,
+            max_threads=max_threads,
+            server_info_file=server_info_file,
+        )

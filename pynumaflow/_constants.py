@@ -9,7 +9,7 @@ SIDE_INPUT_DIR_PATH = "/var/numaflow/side-inputs"
 # Socket configs
 MAP_SOCK_PATH = "/var/run/numaflow/map.sock"
 MAP_STREAM_SOCK_PATH = "/var/run/numaflow/mapstream.sock"
-MAP_BATCH_SOCK_PATH =  "/var/run/numaflow/batchmap.sock"
+MAP_BATCH_SOCK_PATH = "/var/run/numaflow/batchmap.sock"
 REDUCE_SOCK_PATH = "/var/run/numaflow/reduce.sock"
 REDUCE_STREAM_SOCK_PATH = "/var/run/numaflow/reducestream.sock"
 SOURCE_TRANSFORMER_SOCK_PATH = "/var/run/numaflow/sourcetransform.sock"

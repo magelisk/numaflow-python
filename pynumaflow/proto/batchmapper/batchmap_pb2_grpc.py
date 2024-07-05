@@ -6,28 +6,29 @@ import warnings
 from . import batchmap_pb2 as batchmap__pb2
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 
-GRPC_GENERATED_VERSION = '1.64.0'
+GRPC_GENERATED_VERSION = "1.64.0"
 GRPC_VERSION = grpc.__version__
-EXPECTED_ERROR_RELEASE = '1.65.0'
-SCHEDULED_RELEASE_DATE = 'June 25, 2024'
+EXPECTED_ERROR_RELEASE = "1.65.0"
+SCHEDULED_RELEASE_DATE = "June 25, 2024"
 _version_not_supported = False
 
 try:
     from grpc._utilities import first_version_is_lower
+
     _version_not_supported = first_version_is_lower(GRPC_VERSION, GRPC_GENERATED_VERSION)
 except ImportError:
     _version_not_supported = True
 
 if _version_not_supported:
     warnings.warn(
-        f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in batchmap_pb2_grpc.py depends on'
-        + f' grpcio>={GRPC_GENERATED_VERSION}.'
-        + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
-        + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
-        + f' This warning will become an error in {EXPECTED_ERROR_RELEASE},'
-        + f' scheduled for release on {SCHEDULED_RELEASE_DATE}.',
-        RuntimeWarning
+        f"The grpc package installed is at version {GRPC_VERSION},"
+        + f" but the generated code in batchmap_pb2_grpc.py depends on"
+        + f" grpcio>={GRPC_GENERATED_VERSION}."
+        + f" Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}"
+        + f" or downgrade your generated code using grpcio-tools<={GRPC_VERSION}."
+        + f" This warning will become an error in {EXPECTED_ERROR_RELEASE},"
+        + f" scheduled for release on {SCHEDULED_RELEASE_DATE}.",
+        RuntimeWarning,
     )
 
 
@@ -41,26 +42,27 @@ class BatchMapStub(object):
             channel: A grpc.Channel.
         """
         self.IsReady = channel.unary_unary(
-                '/batchmap.v1.BatchMap/IsReady',
-                request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-                response_deserializer=batchmap__pb2.ReadyResponse.FromString,
-                _registered_method=True)
+            "/batchmap.v1.BatchMap/IsReady",
+            request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
+            response_deserializer=batchmap__pb2.ReadyResponse.FromString,
+            _registered_method=True,
+        )
         self.BatchMapFn = channel.stream_stream(
-                '/batchmap.v1.BatchMap/BatchMapFn',
-                request_serializer=batchmap__pb2.BatchMapRequest.SerializeToString,
-                response_deserializer=batchmap__pb2.BatchMapResponse.FromString,
-                _registered_method=True)
+            "/batchmap.v1.BatchMap/BatchMapFn",
+            request_serializer=batchmap__pb2.BatchMapRequest.SerializeToString,
+            response_deserializer=batchmap__pb2.BatchMapResponse.FromString,
+            _registered_method=True,
+        )
 
 
 class BatchMapServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def IsReady(self, request, context):
-        """IsReady is the heartbeat endpoint for gRPC.
-        """
+        """IsReady is the heartbeat endpoint for gRPC."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def BatchMapFn(self, request_iterator, context):
         """BatchMapFn is a bi-directional streaming rpc which applies a
@@ -68,48 +70,51 @@ class BatchMapServicer(object):
         back MapResponse elements.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
 
 def add_BatchMapServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'IsReady': grpc.unary_unary_rpc_method_handler(
-                    servicer.IsReady,
-                    request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=batchmap__pb2.ReadyResponse.SerializeToString,
-            ),
-            'BatchMapFn': grpc.stream_stream_rpc_method_handler(
-                    servicer.BatchMapFn,
-                    request_deserializer=batchmap__pb2.BatchMapRequest.FromString,
-                    response_serializer=batchmap__pb2.BatchMapResponse.SerializeToString,
-            ),
+        "IsReady": grpc.unary_unary_rpc_method_handler(
+            servicer.IsReady,
+            request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
+            response_serializer=batchmap__pb2.ReadyResponse.SerializeToString,
+        ),
+        "BatchMapFn": grpc.stream_stream_rpc_method_handler(
+            servicer.BatchMapFn,
+            request_deserializer=batchmap__pb2.BatchMapRequest.FromString,
+            response_serializer=batchmap__pb2.BatchMapResponse.SerializeToString,
+        ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'batchmap.v1.BatchMap', rpc_method_handlers)
+        "batchmap.v1.BatchMap", rpc_method_handlers
+    )
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('batchmap.v1.BatchMap', rpc_method_handlers)
+    server.add_registered_method_handlers("batchmap.v1.BatchMap", rpc_method_handlers)
 
 
- # This class is part of an EXPERIMENTAL API.
+# This class is part of an EXPERIMENTAL API.
 class BatchMap(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def IsReady(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+    def IsReady(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/batchmap.v1.BatchMap/IsReady',
+            "/batchmap.v1.BatchMap/IsReady",
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
             batchmap__pb2.ReadyResponse.FromString,
             options,
@@ -120,23 +125,26 @@ class BatchMap(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True)
+            _registered_method=True,
+        )
 
     @staticmethod
-    def BatchMapFn(request_iterator,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
+    def BatchMapFn(
+        request_iterator,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
         return grpc.experimental.stream_stream(
             request_iterator,
             target,
-            '/batchmap.v1.BatchMap/BatchMapFn',
+            "/batchmap.v1.BatchMap/BatchMapFn",
             batchmap__pb2.BatchMapRequest.SerializeToString,
             batchmap__pb2.BatchMapResponse.FromString,
             options,
@@ -147,4 +155,5 @@ class BatchMap(object):
             wait_for_ready,
             timeout,
             metadata,
-            _registered_method=True)
+            _registered_method=True,
+        )

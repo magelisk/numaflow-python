@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Iterator, Sequence, Awaitable, AsyncIterable
+from collections.abc import Iterator, Sequence, AsyncIterable
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TypeVar, Callable, Union, Optional
@@ -153,12 +153,11 @@ class Datum:
         self._watermark = watermark
         self._headers = headers or {}
 
-
     @property
     def id(self) -> str:
         """Returns the keys of the event"""
         return self._id
-    
+
     @property
     def keys(self) -> list[str]:
         """Returns the keys of the event"""
@@ -184,15 +183,16 @@ class Datum:
         """Returns the headers of the event."""
         return self._headers.copy()
 
+
 class BatchResponses:
     # ID of input datum messages derived from
 
-    def __init__(self, id:str, messages:Messages= None):
+    def __init__(self, id: str, messages: Messages = None):
         self._id = id
         self._messages = messages
 
     @classmethod
-    def to_drop(cls: type[M], msg_id:str) -> M:
+    def to_drop(cls: type[M], msg_id: str) -> M:
         msgs = Messages(Message.to_drop())
         return cls(msg_id, msgs)
 
@@ -200,14 +200,15 @@ class BatchResponses:
     def id(self) -> str:
         """Returns the keys of the event"""
         return self._id
-    
+
     @property
     def messages(self) -> Messages:
         """Returns the keys of the event"""
         return self._messages
-    
+
     def __repr__(self) -> str:
         return f"BaseResponses: id={self.__class__.__name__}, num_messages={len(self._messages)}"
+
 
 class BatchMapper(metaclass=ABCMeta):
     """
@@ -228,6 +229,7 @@ class BatchMapper(metaclass=ABCMeta):
         Implement this handler function which implements the MapSyncCallable interface.
         """
         pass
+
 
 # MapAsyncCallable is a callable which can be used as a handler for the Asynchronous Map UDF
 MapBatchAsyncHandlerCallable = Callable[[AsyncIterable[Datum]], AsyncIterable[BatchResponses]]

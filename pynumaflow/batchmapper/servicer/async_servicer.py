@@ -1,12 +1,11 @@
 import asyncio
 from collections import deque
 from collections.abc import AsyncIterable
-from datetime import datetime, timedelta
+from datetime import datetime
 
-import grpc
 from google.protobuf import empty_pb2 as _empty_pb2
 
-from pynumaflow.batchmapper._dtypes import Datum, Message, Messages, BatchResponses
+from pynumaflow.batchmapper._dtypes import Datum, Message
 from pynumaflow.batchmapper._dtypes import MapBatchAsyncHandlerCallable
 from pynumaflow.proto.batchmapper import batchmap_pb2, batchmap_pb2_grpc
 from pynumaflow.types import NumaflowServicerContext
@@ -42,13 +41,13 @@ class BatchMapServicer(batchmap_pb2_grpc.BatchMapServicer):
     This class is designed to enable different access patterns with inheritance. This can
     be useful to build consistent data access ability across different applications.
     In order to use this, the class being used must be provided to the BatchMapAsyncServer
-    for initialization.    
+    for initialization.
 
     class OtherImpl(BaseMapServicer):
         async def present_data(self, datum_iterator: AsyncIterable[Datum])
             -> AsyncIterable[batchmap_pb2.BatchMapResponse]:
             ... # manage data here
-    
+
     """
 
     def __init__(
@@ -56,7 +55,6 @@ class BatchMapServicer(batchmap_pb2_grpc.BatchMapServicer):
         handler: MapBatchAsyncHandlerCallable,
     ):
         self._handler: MapBatchAsyncHandlerCallable = handler
-
 
     async def IsReady(
         self, request: _empty_pb2.Empty, context: NumaflowServicerContext
@@ -86,16 +84,20 @@ class BatchMapServicer(batchmap_pb2_grpc.BatchMapServicer):
             _LOGGER.critical("UDFError, re-raising the error", exc_info=True)
             raise err
 
-    async def present_data(self, datum_iterator: AsyncIterable[Datum]) -> AsyncIterable[batchmap_pb2.BatchMapResponse]:
+    async def present_data(
+        self, datum_iterator: AsyncIterable[Datum]
+    ) -> AsyncIterable[batchmap_pb2.BatchMapResponse]:
         try:
-            
             async for response_msgs in self._handler.handler(datum_iterator):
                 # Implicitly ensure we have a list
                 yield batchmap_pb2.BatchMapResponse(
-                    results=[batchmap_pb2.BatchMapResponse.Result(
-                        keys=msg.keys, value=msg.value, tags=msg.tags
-                    ) for msg in response_msgs.messages],
-                    id=response_msgs.id
+                    results=[
+                        batchmap_pb2.BatchMapResponse.Result(
+                            keys=msg.keys, value=msg.value, tags=msg.tags
+                        )
+                        for msg in response_msgs.messages
+                    ],
+                    id=response_msgs.id,
                 )
         except Exception as err:
             err_msg = "UDSinkError: %r" % err
@@ -106,10 +108,13 @@ class BatchMapServicer(batchmap_pb2_grpc.BatchMapServicer):
                     batchmap_pb2.BatchMapResponse.Result.as_failure(_datum.id, err_msg)
                 )
 
-#----
+
+# ----
 class BatchMapUnaryServicer(BatchMapServicer):
     """Operates a async-mapper unary style prentation. Does not provide batching,
-    but a streamlined interface for individual message handling that can be used in place of `mapper.MapAsyncServer`"""
+    but a streamlined interface for individual message handling that can be used in place of `mapper.MapAsyncServer`
+    """
+
     async def present_data(
         self,
         datum_iterator: AsyncIterable[Datum],
@@ -122,7 +127,7 @@ class BatchMapUnaryServicer(BatchMapServicer):
         except Exception as err:
             _LOGGER.critical("UDFError, re-raising the error", exc_info=True)
             raise err
-        
+
     async def _process_one_flatmap(self, msg: Datum):
         msg_id = msg.id
 
@@ -134,27 +139,22 @@ class BatchMapUnaryServicer(BatchMapServicer):
                     results.append(result)
                 else:
                     results.append([m for m in result])
-            
+
             # We intentially store results and send at completion of callback to ensure no partial returns
-            yield batchmap_pb2.BatchMapResponse(
-                results=results,
-                id=msg_id
-            )
-            
+            yield batchmap_pb2.BatchMapResponse(results=results, id=msg_id)
+
         except Exception as err:
             err_msg = "UDFError, re-raising the error: %r" % err
             _LOGGER.critical(err_msg, exc_info=True)
             raise err
-        
+
 
 class BatchMapGroupingServicer(BatchMapServicer):
-    def __init__(self, 
-                 handler: MapBatchAsyncHandlerCallable,
-                 batch_size:int=10,
-                 timeout_sec: int=5
-                 ):
+    def __init__(
+        self, handler: MapBatchAsyncHandlerCallable, batch_size: int = 10, timeout_sec: int = 5
+    ):
         super().__init__(handler)
-        
+
         self._batch_size = batch_size
         self._timeout_sec = timeout_sec
 
@@ -166,6 +166,7 @@ class BatchMapGroupingServicer(BatchMapServicer):
         start_time = datetime.now()
 
         keep_going = True
+
         async def fetch_next_datum():
             nonlocal keep_going
             try:
@@ -175,7 +176,7 @@ class BatchMapGroupingServicer(BatchMapServicer):
             except StopAsyncIteration:
                 keep_going = False
                 return None
-            
+
         while keep_going:
             datum = await fetch_next_datum()
             if datum:
@@ -211,10 +212,13 @@ class BatchMapGroupingServicer(BatchMapServicer):
             async for response_msgs in self._handler.handler(msgs):
                 # Implicitly ensure we have a list
                 yield batchmap_pb2.BatchMapResponse(
-                    results=[batchmap_pb2.BatchMapResponse.Result(
-                        keys=msg.keys, value=msg.value, tags=msg.tags
-                    ) for msg in response_msgs.messages],
-                    id=response_msgs.id
+                    results=[
+                        batchmap_pb2.BatchMapResponse.Result(
+                            keys=msg.keys, value=msg.value, tags=msg.tags
+                        )
+                        for msg in response_msgs.messages
+                    ],
+                    id=response_msgs.id,
                 )
         except Exception as err:
             err_msg = "UDSinkError: %r" % err
@@ -231,16 +235,16 @@ class BatchMapGroupingServicer(BatchMapServicer):
         #     # async for result in self._map_stream_handler.handler_stream(msg):
         #     async for result in self._map_stream_handler.handler(msgs):
         #         results.append(result)
-            
+
         #     # We intentially store results and send at completion of callback to ensure no partial returns
         #     # TOOD: Move this to base class?
         #     for result in results:
         #         yield mapstream_pb2.MapStreamResponse(
         #             result=mapstream_pb2.MapStreamResponse.Result(
-        #                 keys=result.keys, value=result.value, tags=result.tags  # MDW: 
+        #                 keys=result.keys, value=result.value, tags=result.tags  # MDW:
         #             )
         #         )
-            
+
         #     # TODO: Send completion message for given msg_id
         # except Exception as err:
         #     err_msg = "UDFError, re-raising the error: %r" % err
