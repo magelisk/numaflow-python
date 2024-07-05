@@ -10,7 +10,7 @@ from pynumaflow._constants import (
     MAP_BATCH_SERVER_INFO_FILE_PATH,
 )
 from pynumaflow.batchmapper._dtypes import MapBatchAsyncCallable
-from pynumaflow.batchmapper.servicer.async_servicer import AsyncBatchMapServicer
+from pynumaflow.batchmapper.servicer.async_servicer import AsyncBatchMapServicerBase
 from pynumaflow.proto.batchmapper import batchmap_pb2_grpc
 from pynumaflow.shared.server import (
     NumaflowServer,
@@ -79,7 +79,7 @@ class BatchMapAsyncServer(NumaflowServer):
             ("grpc.max_receive_message_length", self.max_message_size),
         ]
         
-        self.servicer = AsyncBatchMapServicer(handler=mapper_instance)
+        self.servicer = AsyncBatchMapServicerBase(handler=mapper_instance)
 
     def start(self) -> None:
         """
