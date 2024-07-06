@@ -11,24 +11,12 @@ from pynumaflow.batchmapper import (
     BatchResponses,
 )
 
-import numpy as np
-
-SLEEP_TIME = int(os.environ.get("SLEEP_TIME_SEC", "1"))
-
-
-def b64_to_array(b64_data):
-    data_bytes = base64.b64decode(b64_data)
-    return np.frombuffer(data_bytes, dtype=np.uint8) * 1.0j
-
 
 class MapperStreamer(BatchMapper):
     async def handler(self, datum: AsyncIterable[Datum]) -> AsyncIterable[BatchResponses]:
         """
-        A handler to iterate over each item in stream and will output message for each item.
-        For example, indicates even, odd, or DROP if 0.
-
-        This will sleep a very short time to simulate longer processing so that we can see
-        messages actually backing up and getting fetched and processed in batches
+        A handler to demonstrate batching providing standard per-message actions as
+        well as a grouping of all messages together - a value add of batch vs standard map
         """
         all_grouped = []
 
@@ -38,15 +26,14 @@ class MapperStreamer(BatchMapper):
             val = hash(parsed["Data"]["padding"])
             base64.b64decode(parsed["Data"]["padding"])
 
+            all_grouped.append((msg.id, val))
+
+        for idx, id_and_val in enumerate(all_grouped):
+            msg_id, val = id_and_val
             as_str = str(val)
-            all_grouped.append(val)
-
-        for idx, val in enumerate(all_grouped):
-            # print(f"Computed message value = {as_str}")
-
             last_int = int(as_str[-1])
             if last_int == 0:
-                yield BatchResponses.to_drop(msg.id)
+                yield BatchResponses.to_drop(msg_id)
                 continue
 
             if last_int % 2 == 0:
@@ -59,19 +46,21 @@ class MapperStreamer(BatchMapper):
             msgs = Messages(
                 Message(value=as_str.encode("utf-8"), keys=output_keys, tags=output_tags)
             )
-            # A final step to demonstrate 'grouping' values, a value-add of batch
-            if idx == len(all_grouped) -1:
-                msg.append(
-                    
-                    Message(value=json.dumps(all_grouped).encode("utf-8"), keys=[], tags=["grouped"])
+            # A final step to demonstrate 'grouping' values
+            # Associate it with final message ID because that's what's left
+            if idx == len(all_grouped) - 1:
+                msgs.append(
+                    Message(
+                        value=json.dumps([x[1] for x in all_grouped]).encode("utf-8"),
+                        keys=[],
+                        tags=["grouped"],
+                    )
                 )
-            response = BatchResponses(msg.id, msgs)
-            # print(f"Returning {response}")
+            response = BatchResponses(msg_id, msgs)
             yield response
 
 
 if __name__ == "__main__":
-    # NOTE: stream handler does currently support function-only handler
     handler = MapperStreamer()
     grpc_server = BatchMapServer(handler)
     grpc_server.start()

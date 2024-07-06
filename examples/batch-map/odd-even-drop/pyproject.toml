@@ -7,7 +7,6 @@ authors = ["Numaflow developers"]
 [tool.poetry.dependencies]
 python = "~3.10"
 pynumaflow = { path = "./dist/pynumaflow.tar.gz"}
-numpy = ">1.0.0,<2.0.0"
 
 [tool.poetry.dev-dependencies]
 

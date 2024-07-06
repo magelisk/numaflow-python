@@ -97,7 +97,7 @@ class BatchMapServer(BatchMapAsyncServerBase):
     This creates a Server instance to handler an input stream of data and
     allow data to be streamed back out. The input is not bounded at the SDK level
     and handler function must be cognizant to handle to handle each message and to decide
-    access patterns. 
+    access patterns.
 
     Example invocation:
         from pynumaflow.batchmapper import (
@@ -117,7 +117,7 @@ class BatchMapServer(BatchMapAsyncServerBase):
                     )
                     response = BatchResponses(msg.id, msgs)
                     yield response
-            
+
         if __name__ == "__main__":
             handler = MapperStreamer()
             grpc_server = BatchMapServer(handler)
@@ -150,6 +150,7 @@ class BatchMapUnaryServer(BatchMapAsyncServerBase):
     may provide a performance boost by utilzing the a GRPC stream rather
     than true GRPC unary to the numa client.
     """
+
     def __init__(
         self,
         mapper_instance: MapBatchAsyncUnaryCallable,
@@ -179,7 +180,7 @@ class BatchMapGroupingServer(BatchMapAsyncServerBase):
     * Faciliate temporal data presentation. Useful particularly if input data is not sent in a
         relatively continuous rate so waiting for max_batch_size to be reached may introduce
         too much delay
-    
+
     Performance note: The handler interface uses AsyncInterable as input to provide identical
     drop-in support with BatchMapServer. However, the data is already present in memory by the
     time this is called so async-for to access data will not provide any context switching and
@@ -188,9 +189,10 @@ class BatchMapGroupingServer(BatchMapAsyncServerBase):
     Additional Args:
       max_batch_size: Maxmium number of messages to present to handler.
       timeout_sec: Number of seconds to wait for gathering messages. This time counting will
-    
+
     Which ever field is reached first will trigger handler to be called with which ever data is present.
     """
+
     def __init__(
         self,
         mapper_instance: MapBatchAsyncCallable,
