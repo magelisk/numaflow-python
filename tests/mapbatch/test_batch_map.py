@@ -1,12 +1,10 @@
 import asyncio
 import logging
-import pathlib
 import threading
 import unittest
 from collections.abc import AsyncIterable
 
 import grpc
-from google.protobuf import empty_pb2 as _empty_pb2
 from grpc.aio._server import Server
 
 from pynumaflow import setup_logging

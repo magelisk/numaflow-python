@@ -1,4 +1,3 @@
-from pynumaflow.batchmapper import Datum
 from pynumaflow.proto.batchmapper import batchmap_pb2
 from tests.testing_utils import get_time_args, mock_message
 

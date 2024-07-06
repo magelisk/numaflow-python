@@ -13,10 +13,6 @@ from google.protobuf.internal import builder as _builder
 _sym_db = _symbol_database.Default()
 
 
-from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
-from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
-
-
 DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(
     b'\n\x0e\x62\x61tchmap.proto\x12\x0b\x62\x61tchmap.v1\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto"\x85\x02\n\x0f\x42\x61tchMapRequest\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\r\n\x05value\x18\x02 \x01(\x0c\x12.\n\nevent_time\x18\x03 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12-\n\twatermark\x18\x04 \x01(\x0b\x32\x1a.google.protobuf.Timestamp\x12:\n\x07headers\x18\x05 \x03(\x0b\x32).batchmap.v1.BatchMapRequest.HeadersEntry\x12\n\n\x02id\x18\x06 \x01(\t\x1a.\n\x0cHeadersEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01"\x8a\x01\n\x10\x42\x61tchMapResponse\x12\x35\n\x07results\x18\x01 \x03(\x0b\x32$.batchmap.v1.BatchMapResponse.Result\x12\n\n\x02id\x18\x02 \x01(\t\x1a\x33\n\x06Result\x12\x0c\n\x04keys\x18\x01 \x03(\t\x12\r\n\x05value\x18\x02 \x01(\x0c\x12\x0c\n\x04tags\x18\x03 \x03(\t"\x1e\n\rReadyResponse\x12\r\n\x05ready\x18\x01 \x01(\x08\x32\x98\x01\n\x08\x42\x61tchMap\x12=\n\x07IsReady\x12\x16.google.protobuf.Empty\x1a\x1a.batchmap.v1.ReadyResponse\x12M\n\nBatchMapFn\x12\x1c.batchmap.v1.BatchMapRequest\x1a\x1d.batchmap.v1.BatchMapResponse(\x01\x30\x01\x42<Z:github.com/numaproj/numaflow-go/pkg/apis/proto/batchmap/v1b\x06proto3'
 )
