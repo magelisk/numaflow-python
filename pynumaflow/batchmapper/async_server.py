@@ -129,7 +129,7 @@ class BatchMapServer(BatchMapAsyncServerBase):
         )
 
 
-class BatchMapUnaryServer(NumaflowServer):
+class BatchMapUnaryServer(BatchMapAsyncServerBase):
     def __init__(
         self,
         mapper_instance: MapBatchAsyncCallable,
@@ -141,7 +141,6 @@ class BatchMapUnaryServer(NumaflowServer):
         servicer = BatchMapUnaryServicer(mapper_instance)
         super().__init__(
             servicer,
-            mapper_instance,
             sock_path=sock_path,
             max_message_size=max_message_size,
             max_threads=max_threads,

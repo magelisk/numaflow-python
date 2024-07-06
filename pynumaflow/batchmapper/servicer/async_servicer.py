@@ -5,7 +5,7 @@ from datetime import datetime
 
 from google.protobuf import empty_pb2 as _empty_pb2
 
-from pynumaflow.batchmapper._dtypes import Datum, Message
+from pynumaflow.batchmapper._dtypes import Datum, Message, Messages
 from pynumaflow.batchmapper._dtypes import MapBatchAsyncHandlerCallable
 from pynumaflow.proto.batchmapper import batchmap_pb2, batchmap_pb2_grpc
 from pynumaflow.types import NumaflowServicerContext
@@ -132,16 +132,20 @@ class BatchMapUnaryServicer(BatchMapServicer):
         msg_id = msg.id
 
         try:
-            results: Message = []
             # async for result in self._map_stream_handler.handler_stream(msg):
-            async for result in self._handler(msg.keys, msg):
-                if isinstance(result, Message):
-                    results.append(result)
-                else:
-                    results.append([m for m in result])
+            result = await self._handler(msg.keys, msg)
+            if isinstance(result, Message):
+                result = Messages(result)
 
-            # We intentially store results and send at completion of callback to ensure no partial returns
-            yield batchmap_pb2.BatchMapResponse(results=results, id=msg_id)
+            yield batchmap_pb2.BatchMapResponse(
+                    results=[
+                        batchmap_pb2.BatchMapResponse.Result(
+                            keys=msg.keys, value=msg.value, tags=msg.tags
+                        )
+                        for msg in result
+                    ],
+                    id=msg_id,
+                )
 
         except Exception as err:
             err_msg = "UDFError, re-raising the error: %r" % err

@@ -1,4 +1,4 @@
-from pynumaflow.batchmapper.async_server import BatchMapServer
+from pynumaflow.batchmapper.async_server import BatchMapServer, BatchMapUnaryServer
 
 from pynumaflow.batchmapper._dtypes import (
     Message,
@@ -17,4 +17,5 @@ __all__ = [
     "DROP",
     "BatchMapper",
     "BatchMapServer",
+    "BatchMapUnaryServer",
 ]

@@ -11,21 +11,16 @@ from grpc.aio._server import Server
 from pynumaflow import setup_logging
 from pynumaflow.batchmapper import (
     BatchMapServer,
+    BatchMapUnaryServer,
     Datum, 
     BatchResponses, 
     Message,
     Messages
 )
 from pynumaflow.proto.batchmapper import batchmap_pb2_grpc
-from .utils import generate_request_item
+from .utils import generate_request_items
 
-# from pynumaflow.mapstreamer import (
-#     Message,
-#     Datum,
-#     MapStreamAsyncServer,
-# )
-# from pynumaflow.proto.mapstreamer import mapstream_pb2_grpc
-# from tests.mapstream.utils import start_request_map_stream
+from ..map.test_async_mapper import async_map_handler
 
 LOGGER = setup_logging(__name__)
 
@@ -37,18 +32,16 @@ async def async_batch_handler(datums: AsyncIterable[Datum]) -> AsyncIterable[Bat
     idx = 0
     async for datum in datums:
         val = datum.value
-        msg = "payload:{} event_time:{} watermark:{} id:{} idx:{}".format(
+        msg = "payload=={} event_time=={} watermark=={} id=={} idx=={}".format(
         val.decode("utf-8"),
-        datum.event_time,
-        datum.watermark,
+        str(datum.event_time).replace(" ", "T"),
+        str(datum.watermark).replace(" ", "T"),
         datum.id,
         idx,
     )
         msgs = Messages(Message(str.encode(msg), keys=[]))
         yield BatchResponses(datum.id, msgs)
         idx += 1
-                    
-
 
 
 _s: Server = None
@@ -81,7 +74,8 @@ async def start_server(udfs):
     await server.wait_for_termination()
 
 
-class TestAsyncMapStreamer(unittest.TestCase):
+
+class TestBatchMapBase:
     @classmethod
     def setUpClass(cls) -> None:
         global _loop
@@ -89,7 +83,7 @@ class TestAsyncMapStreamer(unittest.TestCase):
         _loop = loop
         _thread = threading.Thread(target=startup_callable, args=(loop,), daemon=True)
         _thread.start()
-        udfs = NewBatchMapStreamer()
+        udfs = cls.class_under_test()
         asyncio.run_coroutine_threadsafe(start_server(udfs), loop=loop)
         while True:
             try:
@@ -110,52 +104,80 @@ class TestAsyncMapStreamer(unittest.TestCase):
         except Exception as e:
             LOGGER.error(e)
 
+    def _stub(self):
+        return batchmap_pb2_grpc.BatchMapStub(_channel)
+
+class TestBatchMap(TestBatchMapBase, unittest.TestCase):
+    @classmethod
+    def class_under_test(cls):
+        return NewBatchMapStreamer()
+    
+
     def test_map_stream(self) -> None:
-        stub = self.__stub()
+        stub = self._stub()
         # request = get_request_item("a")
         generator_response = None
         try:
-            # generator_response = stub.BatchMapFn(request)
-            generator_response = stub.BatchMapFn(request_iterator=generate_request_item("a"))
+            # Two separate calls to show each as the 'idx' reset showing new invocations based on previous end-of-input-stream
+            ids1 = ["a", "b", "c", "d", "e"]
+            generator_response1 = stub.BatchMapFn(request_iterator=generate_request_items(ids1))
+
+            ids2 = ["x", "y", "z"]
+            generator_response2 = stub.BatchMapFn(request_iterator=generate_request_items(ids2))
         except grpc.RpcError as e:
             logging.error(e)
 
-        results = [x for x in generator_response]
-        print(results)
+        results1 = [x for x in generator_response1]
+        results2 = [x for x in generator_response2]
+        
+        assert len(results1) == len(ids1)
+        assert len(results2) == len(ids2)
 
-        assert False, "for now"
-#         counter = 0
-#         # capture the output from the MapStreamFn generator and assert.
-#         for r in generator_response:
-#             counter += 1
-#             self.assertEqual(
-#                 bytes(
-#                     "payload:test_mock_message "
-#                     "event_time:2022-09-12 16:00:00 watermark:2022-09-12 16:01:00",
-#                     encoding="utf-8",
-#                 ),
-#                 r.result.value,
-#             )
-#         """Assert that the generator was called 10 times in the stream"""
-#         self.assertEqual(10, counter)
+        def _split_data(data):
+            kvp_parts = [d.split("==") for d in data.split()]
+            return {k:v for k,v in kvp_parts}
+            
+        for idx, response in enumerate(results1):
+            assert response.id == ids1[idx]
+            kvp = _split_data(response.results[0].value.decode(encoding="utf-8"))
+            assert int(kvp["idx"]) == idx
+        
 
-    def test_is_ready(self) -> None:
-        with grpc.insecure_channel("unix:///tmp/async_map_stream.sock") as channel:
-            stub = batchmap_pb2_grpc.BatchMapStub(channel)
+class TestBatchMapUnary(TestBatchMapBase, unittest.TestCase):
+    @classmethod
+    def class_under_test(cls):
+        # Explicitly use same handler from map/async-mapper test to show drop-in replacement ability
+        server = BatchMapUnaryServer(mapper_instance=async_map_handler)
+        udfs = server.servicer
+        return udfs
+    
 
-            request = _empty_pb2.Empty()
-            response = None
-            try:
-                response = stub.IsReady(request=request)
-            except grpc.RpcError as e:
-                logging.error(e)
+    def test_map_unary(self) -> None:
+        stub = self._stub()
+        # request = get_request_item("a")
+        try:            
+            ids1 = ["a", "b", "c", "d", "e"]
+            generator_response1 = stub.BatchMapFn(request_iterator=generate_request_items(ids1))
 
-            self.assertTrue(response.ready)
+            ids2 = ["x", "y", "z"]
+            generator_response2 = stub.BatchMapFn(request_iterator=generate_request_items(ids2))
+        except grpc.RpcError as e:
+            logging.error(e)
 
-    def __stub(self):
-        return batchmap_pb2_grpc.BatchMapStub(_channel)
+        results1 = [x for x in generator_response1]
+        results2 = [x for x in generator_response2]
+        
+        assert len(results1) == len(ids1)
+        assert len(results2) == len(ids2)
 
+        # Two separate calls for two "batches" of data, but each will be handled independently, repeating 'index=0'
+        def _split_data(data):
+            kvp_parts = [d.split("==") for d in data.split()]
+            return {k:v for k,v in kvp_parts}
+            
+        for idx, response in enumerate(results1):
+            assert response.id == ids1[idx]
+        
+        for idx, response in enumerate(results2):
+            assert response.id == ids2[idx]
 
-# if __name__ == "__main__":
-#     logging.basicConfig(level=logging.DEBUG)
-#     unittest.main()
