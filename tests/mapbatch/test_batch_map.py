@@ -14,10 +14,10 @@ from pynumaflow.batchmapper import (
     BatchMapServer,
     BatchMapUnaryServer,
     BatchMapGroupingServer,
-    Datum, 
-    BatchResponses, 
+    Datum,
+    BatchResponses,
     Message,
-    Messages
+    Messages,
 )
 from pynumaflow.proto.batchmapper import batchmap_pb2_grpc
 from .utils import generate_request_items
@@ -48,7 +48,8 @@ async def async_batch_handler(datums: AsyncIterable[Datum]) -> AsyncIterable[Bat
 
 def _split_response_msg(data):
     kvp_parts = [d.split("==") for d in data.split()]
-    return {k:v for k,v in kvp_parts}
+    return {k: v for k, v in kvp_parts}
+
 
 # async def async_batch_handler_list(datums: AsyncIterable[Datum]) -> AsyncIterable[BatchResponses]:
 #     idx = 0
@@ -131,12 +132,13 @@ class TestBatchMapBase:
     def _stub(self):
         return batchmap_pb2_grpc.BatchMapStub(self._channel)
 
+
 class TestBatchMap(TestBatchMapBase, unittest.TestCase):
     SOCK_NAME = "batch_map_stream.sock"
+
     @classmethod
     def class_under_test(cls):
         return NewBatchMapStreamer()
-    
 
     def test_map_stream(self) -> None:
         stub = self._stub()
@@ -153,7 +155,7 @@ class TestBatchMap(TestBatchMapBase, unittest.TestCase):
 
         results1 = [x for x in generator_response1]
         results2 = [x for x in generator_response2]
-        
+
         assert len(results1) == len(ids1)
         assert len(results2) == len(ids2)
 
@@ -161,12 +163,13 @@ class TestBatchMap(TestBatchMapBase, unittest.TestCase):
             assert response.id == ids1[idx]
             kvp = _split_response_msg(response.results[0].value.decode(encoding="utf-8"))
             assert int(kvp["idx"]) == idx
-        
+
         for idx, response in enumerate(results2):
             assert response.id == ids2[idx]
             kvp = _split_response_msg(response.results[0].value.decode(encoding="utf-8"))
             assert int(kvp["idx"]) == idx
-        
+
+
 class TestBatchMapUnary(TestBatchMapBase, unittest.TestCase):
     SOCK_NAME = "batch_map_unary.sock"
 
@@ -176,12 +179,11 @@ class TestBatchMapUnary(TestBatchMapBase, unittest.TestCase):
         server = BatchMapUnaryServer(mapper_instance=async_map_handler)
         udfs = server.servicer
         return udfs
-    
 
     def test_map_unary(self) -> None:
         stub = self._stub()
         # request = get_request_item("a")
-        try:            
+        try:
             ids1 = ["a", "b", "c", "d", "e"]
             generator_response1 = stub.BatchMapFn(request_iterator=generate_request_items(ids1))
 
@@ -192,16 +194,15 @@ class TestBatchMapUnary(TestBatchMapBase, unittest.TestCase):
 
         results1 = [x for x in generator_response1]
         results2 = [x for x in generator_response2]
-        
+
         assert len(results1) == len(ids1)
         assert len(results2) == len(ids2)
 
         # Two separate calls for two "batches" of data, but each will be handled independently, repeating 'index=0'
 
-            
         for idx, response in enumerate(results1):
             assert response.id == ids1[idx]
-        
+
         for idx, response in enumerate(results2):
             assert response.id == ids2[idx]
 
@@ -212,21 +213,22 @@ class TestBatchMapGrouping(TestBatchMapBase, unittest.TestCase):
     @classmethod
     def class_under_test(cls):
         # Explicitly use same handler from map/async-mapper test to show drop-in replacement ability
-        server = BatchMapGroupingServer(mapper_instance=async_batch_handler, max_batch_size=3, timeout_sec=2)
+        server = BatchMapGroupingServer(
+            mapper_instance=async_batch_handler, max_batch_size=3, timeout_sec=2
+        )
         udfs = server.servicer
         return udfs
-    
 
     def test_map_unary(self) -> None:
         stub = self._stub()
-        try:            
+        try:
             ids = ["a", "b", "c", "d", "e", "f", "g", "h"]
             generator_response = stub.BatchMapFn(request_iterator=generate_request_items(ids))
         except grpc.RpcError as e:
             logging.error(e)
 
         results = [x for x in generator_response]
-        
+
         assert len(results) == len(ids)
 
         # We get all the responses back, but by inspecting the "idx" in the returned payload we can see that they

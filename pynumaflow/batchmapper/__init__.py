@@ -1,4 +1,8 @@
-from pynumaflow.batchmapper.async_server import BatchMapServer, BatchMapUnaryServer, BatchMapGroupingServer
+from pynumaflow.batchmapper.async_server import (
+    BatchMapServer,
+    BatchMapUnaryServer,
+    BatchMapGroupingServer,
+)
 
 from pynumaflow.batchmapper._dtypes import (
     Message,

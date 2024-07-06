@@ -138,24 +138,26 @@ class BatchMapUnaryServicer(BatchMapServicer):
                 result = Messages(result)
 
             yield batchmap_pb2.BatchMapResponse(
-                    results=[
-                        batchmap_pb2.BatchMapResponse.Result(
-                            keys=msg.keys, value=msg.value, tags=msg.tags
-                        )
-                        for msg in result
-                    ],
-                    id=msg_id,
-                )
+                results=[
+                    batchmap_pb2.BatchMapResponse.Result(
+                        keys=msg.keys, value=msg.value, tags=msg.tags
+                    )
+                    for msg in result
+                ],
+                id=msg_id,
+            )
 
         except Exception as err:
             err_msg = "UDFError, re-raising the error: %r" % err
             _LOGGER.critical(err_msg, exc_info=True)
             raise err
 
+
 async def _make_async_iter(iterable):
     for item in iterable:
         yield item
-        
+
+
 class BatchMapGroupingServicer(BatchMapServicer):
     def __init__(
         self, handler: MapBatchAsyncHandlerCallable, max_batch_size: int = 10, timeout_sec: int = 5
@@ -210,7 +212,6 @@ class BatchMapGroupingServicer(BatchMapServicer):
                         yield message
                     buffer.clear()
                     start_time = datetime.now()
-
 
     async def _process_stream_map(self, msgs: list[Datum]):
         try:

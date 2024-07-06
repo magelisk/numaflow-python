@@ -230,6 +230,7 @@ class BatchMapper(metaclass=ABCMeta):
         """
         pass
 
+
 class BatchMapperUnary(metaclass=ABCMeta):
     """
     Provides an interface to write a BatchMapUnaryServicer
@@ -249,6 +250,7 @@ class BatchMapperUnary(metaclass=ABCMeta):
         Implement this handler function which implements the MapSyncCallable interface.
         """
         pass
+
 
 MapBatchAsyncHandlerCallable = Callable[[AsyncIterable[Datum]], AsyncIterable[BatchResponses]]
 MapBatchAsyncUnaryCallable = Callable[[list[str], Datum], Awaitable[Messages]]
