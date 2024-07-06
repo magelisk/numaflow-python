@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import pathlib
 import threading
 import unittest
 from collections.abc import AsyncIterable
@@ -45,7 +46,6 @@ async def async_batch_handler(datums: AsyncIterable[Datum]) -> AsyncIterable[Bat
 
 
 _s: Server = None
-_channel = grpc.insecure_channel("unix:///tmp/async_map_stream.sock")
 _loop = None
 
 
@@ -62,10 +62,10 @@ def NewBatchMapStreamer(
     return udfs
 
 
-async def start_server(udfs):
+async def start_server(udfs, sock_addr):
     server = grpc.aio.server()
     batchmap_pb2_grpc.add_BatchMapServicer_to_server(udfs, server)
-    listen_addr = "unix:///tmp/async_map_stream.sock"
+    listen_addr = sock_addr
     server.add_insecure_port(listen_addr)
     logging.info("Starting server on %s", listen_addr)
     global _s
@@ -74,7 +74,8 @@ async def start_server(udfs):
     await server.wait_for_termination()
 
 
-
+# Attempt to avoid too much duplicate code between implementations with base clas for setup, but does
+# require some implementation specific SOCK_NAME at class level to avoid socket connect conflicts
 class TestBatchMapBase:
     @classmethod
     def setUpClass(cls) -> None:
@@ -84,10 +85,12 @@ class TestBatchMapBase:
         _thread = threading.Thread(target=startup_callable, args=(loop,), daemon=True)
         _thread.start()
         udfs = cls.class_under_test()
-        asyncio.run_coroutine_threadsafe(start_server(udfs), loop=loop)
+        sock_addr = f"unix:///tmp/{cls.SOCK_NAME}"
+        asyncio.run_coroutine_threadsafe(start_server(udfs, sock_addr), loop=loop)
         while True:
             try:
-                with grpc.insecure_channel("unix:///tmp/async_map_stream.sock") as channel:
+                with grpc.insecure_channel(sock_addr) as channel:
+                    cls._channel = grpc.insecure_channel(sock_addr)
                     f = grpc.channel_ready_future(channel)
                     f.result(timeout=10)
                     if f.done():
@@ -105,9 +108,10 @@ class TestBatchMapBase:
             LOGGER.error(e)
 
     def _stub(self):
-        return batchmap_pb2_grpc.BatchMapStub(_channel)
+        return batchmap_pb2_grpc.BatchMapStub(self._channel)
 
 class TestBatchMap(TestBatchMapBase, unittest.TestCase):
+    SOCK_NAME = "batch_map_stream.sock"
     @classmethod
     def class_under_test(cls):
         return NewBatchMapStreamer()
@@ -116,7 +120,6 @@ class TestBatchMap(TestBatchMapBase, unittest.TestCase):
     def test_map_stream(self) -> None:
         stub = self._stub()
         # request = get_request_item("a")
-        generator_response = None
         try:
             # Two separate calls to show each as the 'idx' reset showing new invocations based on previous end-of-input-stream
             ids1 = ["a", "b", "c", "d", "e"]
@@ -144,6 +147,8 @@ class TestBatchMap(TestBatchMapBase, unittest.TestCase):
         
 
 class TestBatchMapUnary(TestBatchMapBase, unittest.TestCase):
+    SOCK_NAME = "batch_map_unary.sock"
+
     @classmethod
     def class_under_test(cls):
         # Explicitly use same handler from map/async-mapper test to show drop-in replacement ability
