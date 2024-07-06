@@ -38,11 +38,12 @@ class BatchMapServicer(batchmap_pb2_grpc.BatchMapServicer):
     numa sidecar, so the handler must be aware of how to appropriately manage number of
     messages in-flight at once.
 
-    This class is designed to enable different access patterns with inheritance. This can
+    This class is designed to enable different access patterns via inheritance. This can
     be useful to build consistent data access ability across different applications.
     In order to use this, the class being used must be provided to the BatchMapAsyncServer
-    for initialization.
+    for initialization and override present_data
 
+    Example Override:
     class OtherImpl(BaseMapServicer):
         async def present_data(self, datum_iterator: AsyncIterable[Datum])
             -> AsyncIterable[batchmap_pb2.BatchMapResponse]:
@@ -71,8 +72,8 @@ class BatchMapServicer(batchmap_pb2_grpc.BatchMapServicer):
         context: NumaflowServicerContext,
     ) -> AsyncIterable[batchmap_pb2.BatchMapResponse]:
         """
-        Applies a sink function to a list of datum elements.
-        The pascal case function name comes from the proto sink_pb2_grpc.py file.
+        Applies a batch function to a list of datum elements.
+        The pascal case function name comes from the proto batchmap_pb2_grpc.py file.
         """
         datum_iterator = datum_generator(request_iterator=request_iterator)
 
@@ -119,7 +120,6 @@ class BatchMapUnaryServicer(BatchMapServicer):
         self,
         datum_iterator: AsyncIterable[Datum],
     ) -> AsyncIterable[batchmap_pb2.BatchMapResponse]:
-        print("MDW: flatmap:present_data")
         try:
             async for msg in datum_iterator:
                 async for to_ret in self._process_one_flatmap(msg):
@@ -191,14 +191,12 @@ class BatchMapGroupingServicer(BatchMapServicer):
             if datum:
                 buffer.append(datum)
                 if len(buffer) >= self._max_batch_size:
-                    # print("MDW: Process because full")
                     async for message in self._process_stream_map(buffer):
                         yield message
                     buffer.clear()
                     start_time = datetime.now()
             else:
                 if buffer:
-                    # print("MDW: Process because timeout but no data")
                     async for message in self._process_stream_map(buffer):
                         yield message
                     buffer.clear()
@@ -206,7 +204,6 @@ class BatchMapGroupingServicer(BatchMapServicer):
 
             # Check if the timeout has been exceeded
             if (datetime.now() - start_time).total_seconds() >= self._timeout_sec:
-                # print("MDW: What happens here?")
                 if buffer:
                     async for message in self._process_stream_map(buffer):
                         yield message
@@ -236,23 +233,3 @@ class BatchMapGroupingServicer(BatchMapServicer):
                     )
             except Exception as ex:
                 print(f"{ex=}")
-
-        #     results = []
-        #     # async for result in self._map_stream_handler.handler_stream(msg):
-        #     async for result in self._map_stream_handler.handler(msgs):
-        #         results.append(result)
-
-        #     # We intentially store results and send at completion of callback to ensure no partial returns
-        #     # TOOD: Move this to base class?
-        #     for result in results:
-        #         yield mapstream_pb2.MapStreamResponse(
-        #             result=mapstream_pb2.MapStreamResponse.Result(
-        #                 keys=result.keys, value=result.value, tags=result.tags  # MDW:
-        #             )
-        #         )
-
-        #     # TODO: Send completion message for given msg_id
-        # except Exception as err:
-        #     err_msg = "UDFError, re-raising the error: %r" % err
-        #     _LOGGER.critical(err_msg, exc_info=True)
-        #     raise err

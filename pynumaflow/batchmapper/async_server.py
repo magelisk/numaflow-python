@@ -25,28 +25,6 @@ from pynumaflow.shared.server import (
 class BatchMapAsyncServerBase(NumaflowServer):
     """
     Create a new grpc Map Server instance.
-    Args:
-        mapper_instance: The mapper instance to be used for Map UDF
-        sock_path: The UNIX socket path to be used for the server
-        max_message_size: The max message size in bytes the server can receive and send
-        max_threads: The max number of threads to be spawned;
-                        defaults to number of processors x4
-
-    Example invocation:
-        from pynumaflow.mapper import Messages, Message, Datum, MapAsyncServer
-        async def async_map_handler(keys: list[str], datum: Datum) -> Messages:
-            val = datum.value
-            msg = "payload:{} event_time:{} watermark:{}".format(
-                val.decode("utf-8"),
-                datum.event_time,
-                datum.watermark,
-            )
-            val = bytes(msg, encoding="utf-8")
-            return Messages(Message(value=val, keys=keys))
-
-        if __name__ == "__main__":
-            grpc_server = MapAsyncServer(async_map_handler)
-            grpc_server.start()
     """
 
     def __init__(
@@ -115,6 +93,37 @@ class BatchMapAsyncServerBase(NumaflowServer):
 
 
 class BatchMapServer(BatchMapAsyncServerBase):
+    """
+    This creates a Server instance to handler an input stream of data and
+    allow data to be streamed back out. The input is not bounded at the SDK level
+    and handler function must be cognizant to handle to handle each message and to decide
+    access patterns. 
+
+    Example invocation:
+        from pynumaflow.batchmapper import (
+            Message,
+            Messages,
+            Datum,
+            BatchMapper,
+            BatchMapServer,
+            BatchResponses,
+        )
+
+        class MapperStreamer(BatchMapper):
+            async def handler(self, datum: AsyncIterable[Datum]) -> AsyncIterable[BatchResponses]:
+                async for msg in datum:
+                    msgs = Messages(
+                        Message(value=msv.value, keys=[], tags=[])
+                    )
+                    response = BatchResponses(msg.id, msgs)
+                    yield response
+            
+        if __name__ == "__main__":
+            handler = MapperStreamer()
+            grpc_server = BatchMapServer(handler)
+            grpc_server.start()
+    """
+
     def __init__(
         self,
         mapper_instance: MapBatchAsyncCallable,
@@ -134,6 +143,13 @@ class BatchMapServer(BatchMapAsyncServerBase):
 
 
 class BatchMapUnaryServer(BatchMapAsyncServerBase):
+    """
+    This creates a server instance to handle a stream of input data
+    and provide it to callers with identical interface to async_mapper.
+    This allows for a drop-in replacement for this capability. Doing this
+    may provide a performance boost by utilzing the a GRPC stream rather
+    than true GRPC unary to the numa client.
+    """
     def __init__(
         self,
         mapper_instance: MapBatchAsyncUnaryCallable,
@@ -153,11 +169,33 @@ class BatchMapUnaryServer(BatchMapAsyncServerBase):
 
 
 class BatchMapGroupingServer(BatchMapAsyncServerBase):
+    """
+    This creates a Server instance to handler an input stream of data while providing
+    bounding on quanity of data at the SDK level. Messages are grouped to provide either maximum
+    quanity or a maximum time between data being presented to handler. This can be useful to
+    * Guarantee data being provided to handler when numa client supports constant stream from ISB
+        vs readBatchSize
+    * Provide max messages to control memory or resource utilization independent of readBatchSize
+    * Faciliate temporal data presentation. Useful particularly if input data is not sent in a
+        relatively continuous rate so waiting for max_batch_size to be reached may introduce
+        too much delay
+    
+    Performance note: The handler interface uses AsyncInterable as input to provide identical
+    drop-in support with BatchMapServer. However, the data is already present in memory by the
+    time this is called so async-for to access data will not provide any context switching and
+    data can be immediately grouped with `[x for async for x in datums]` as desired
+
+    Additional Args:
+      max_batch_size: Maxmium number of messages to present to handler.
+      timeout_sec: Number of seconds to wait for gathering messages. This time counting will
+    
+    Which ever field is reached first will trigger handler to be called with which ever data is present.
+    """
     def __init__(
         self,
         mapper_instance: MapBatchAsyncCallable,
         max_batch_size: int = 10,
-        timeout_sec: int = None,
+        timeout_sec: int = 10,
         sock_path=MAP_BATCH_SOCK_PATH,
         max_message_size=MAX_MESSAGE_SIZE,
         max_threads=MAX_THREADS,
