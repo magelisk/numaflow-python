@@ -49,22 +49,6 @@ def _split_response_msg(data):
     return {k: v for k, v in kvp_parts}
 
 
-# async def async_batch_handler_list(datums: AsyncIterable[Datum]) -> AsyncIterable[BatchResponses]:
-#     idx = 0
-#     async for datum in datums:
-#         val = datum.value
-#         msg = "payload=={} event_time=={} watermark=={} id=={} idx=={}".format(
-#             val.decode("utf-8"),
-#             str(datum.event_time).replace(" ", "T"),
-#             str(datum.watermark).replace(" ", "T"),
-#             datum.id,
-#             idx,
-#         )
-#         msgs = Messages(Message(str.encode(msg), keys=[]))
-#         yield BatchResponses(datum.id, msgs)
-#         idx += 1
-
-
 _s: Server = None
 _loop = None
 
