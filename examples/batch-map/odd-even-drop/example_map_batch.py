@@ -32,6 +32,7 @@ class MapperStreamer(BatchMapper):
         """
         all_grouped = []
 
+        # Retrieve and gather
         async for msg in datum:
             parsed = json.loads(msg.value.decode())
             val = hash(parsed["Data"]["padding"])
@@ -39,6 +40,8 @@ class MapperStreamer(BatchMapper):
 
             as_str = str(val)
             all_grouped.append(val)
+
+        for idx, val in enumerate(all_grouped):
             # print(f"Computed message value = {as_str}")
 
             last_int = int(as_str[-1])
@@ -56,6 +59,12 @@ class MapperStreamer(BatchMapper):
             msgs = Messages(
                 Message(value=as_str.encode("utf-8"), keys=output_keys, tags=output_tags)
             )
+            # A final step to demonstrate 'grouping' values, a value-add of batch
+            if idx == len(all_grouped) -1:
+                msg.append(
+                    
+                    Message(value=json.dumps(all_grouped).encode("utf-8"), keys=[], tags=["grouped"])
+                )
             response = BatchResponses(msg.id, msgs)
             # print(f"Returning {response}")
             yield response
@@ -63,7 +72,6 @@ class MapperStreamer(BatchMapper):
 
 if __name__ == "__main__":
     # NOTE: stream handler does currently support function-only handler
-    print("Stream")
     handler = MapperStreamer()
     grpc_server = BatchMapServer(handler)
     grpc_server.start()
