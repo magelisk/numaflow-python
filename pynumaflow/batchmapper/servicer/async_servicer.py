@@ -152,14 +152,17 @@ class BatchMapUnaryServicer(BatchMapServicer):
             _LOGGER.critical(err_msg, exc_info=True)
             raise err
 
-
+async def _make_async_iter(iterable):
+    for item in iterable:
+        yield item
+        
 class BatchMapGroupingServicer(BatchMapServicer):
     def __init__(
-        self, handler: MapBatchAsyncHandlerCallable, batch_size: int = 10, timeout_sec: int = 5
+        self, handler: MapBatchAsyncHandlerCallable, max_batch_size: int = 10, timeout_sec: int = 5
     ):
         super().__init__(handler)
 
-        self._batch_size = batch_size
+        self._max_batch_size = max_batch_size
         self._timeout_sec = timeout_sec
 
     async def present_data(
@@ -185,7 +188,7 @@ class BatchMapGroupingServicer(BatchMapServicer):
             datum = await fetch_next_datum()
             if datum:
                 buffer.append(datum)
-                if len(buffer) >= self._batch_size:
+                if len(buffer) >= self._max_batch_size:
                     # print("MDW: Process because full")
                     async for message in self._process_stream_map(buffer):
                         yield message
@@ -208,12 +211,10 @@ class BatchMapGroupingServicer(BatchMapServicer):
                     buffer.clear()
                     start_time = datetime.now()
 
-            # if datum is None and not buffer:
-            #     break
 
     async def _process_stream_map(self, msgs: list[Datum]):
         try:
-            async for response_msgs in self._handler(msgs):
+            async for response_msgs in self._handler(_make_async_iter(msgs)):
                 # Implicitly ensure we have a list
                 yield batchmap_pb2.BatchMapResponse(
                     results=[

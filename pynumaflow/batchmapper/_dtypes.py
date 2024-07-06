@@ -1,5 +1,5 @@
 from abc import ABCMeta, abstractmethod
-from collections.abc import Iterator, Sequence, AsyncIterable
+from collections.abc import Iterator, Sequence, AsyncIterable, Awaitable
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TypeVar, Callable, Union, Optional
@@ -230,7 +230,26 @@ class BatchMapper(metaclass=ABCMeta):
         """
         pass
 
+class BatchMapperUnary(metaclass=ABCMeta):
+    """
+    Provides an interface to write a BatchMapUnaryServicer
+    which will be exposed over a Asynchronous gRPC server.
+    """
 
-# MapAsyncCallable is a callable which can be used as a handler for the Asynchronous Map UDF
+    def __call__(self, *args, **kwargs):
+        """
+        This allows to execute the handler function directly if
+        class instance is sent as a callable.
+        """
+        return self.handler(*args, **kwargs)
+
+    @abstractmethod
+    def handler(self, keys: list[str], datum: Datum) -> Messages:
+        """
+        Implement this handler function which implements the MapSyncCallable interface.
+        """
+        pass
+
 MapBatchAsyncHandlerCallable = Callable[[AsyncIterable[Datum]], AsyncIterable[BatchResponses]]
+MapBatchAsyncUnaryCallable = Callable[[list[str], Datum], Awaitable[Messages]]
 MapBatchAsyncCallable = Union[BatchMapper, MapBatchAsyncHandlerCallable]

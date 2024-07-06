@@ -9,8 +9,8 @@ from pynumaflow._constants import (
     MAP_BATCH_SOCK_PATH,
     MAP_BATCH_SERVER_INFO_FILE_PATH,
 )
-from pynumaflow.batchmapper._dtypes import MapBatchAsyncCallable
-from pynumaflow.batchmapper.servicer.async_servicer import BatchMapServicer, BatchMapUnaryServicer
+from pynumaflow.batchmapper._dtypes import MapBatchAsyncCallable, MapBatchAsyncUnaryCallable
+from pynumaflow.batchmapper.servicer.async_servicer import BatchMapServicer, BatchMapUnaryServicer, BatchMapGroupingServicer
 from pynumaflow.proto.batchmapper import batchmap_pb2_grpc
 from pynumaflow.shared.server import (
     NumaflowServer,
@@ -132,13 +132,33 @@ class BatchMapServer(BatchMapAsyncServerBase):
 class BatchMapUnaryServer(BatchMapAsyncServerBase):
     def __init__(
         self,
-        mapper_instance: MapBatchAsyncCallable,
+        mapper_instance: MapBatchAsyncUnaryCallable,
         sock_path=MAP_BATCH_SOCK_PATH,
         max_message_size=MAX_MESSAGE_SIZE,
         max_threads=MAX_THREADS,
         server_info_file=MAP_BATCH_SERVER_INFO_FILE_PATH,
     ):
         servicer = BatchMapUnaryServicer(mapper_instance)
+        super().__init__(
+            servicer,
+            sock_path=sock_path,
+            max_message_size=max_message_size,
+            max_threads=max_threads,
+            server_info_file=server_info_file,
+        )
+
+class BatchMapGroupingServer(BatchMapAsyncServerBase):
+    def __init__(
+        self,
+        mapper_instance: MapBatchAsyncCallable,
+        max_batch_size: int = 10,
+        timeout_sec: int = None,
+        sock_path=MAP_BATCH_SOCK_PATH,
+        max_message_size=MAX_MESSAGE_SIZE,
+        max_threads=MAX_THREADS,
+        server_info_file=MAP_BATCH_SERVER_INFO_FILE_PATH,
+    ):
+        servicer = BatchMapGroupingServicer(mapper_instance, max_batch_size=max_batch_size, timeout_sec=timeout_sec)
         super().__init__(
             servicer,
             sock_path=sock_path,
