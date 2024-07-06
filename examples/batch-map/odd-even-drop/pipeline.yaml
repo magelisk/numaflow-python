@@ -10,24 +10,19 @@ spec:
       source:
         generator:
           # How many messages to generate in the duration.
-          rpu: 5
-          # rpu: 10
+          rpu: 10
           duration: 1s
-          # Optional, size of each generated message, defaults to 10.
-          msgSize: 1024
+          msgSize: 1000
 
-    - name: even-or-odd-urnary
+    - name: even-or-odd-batch-stream
       metadata:
         annotations:
           numaflow.numaproj.io/batch-map: "true"
       limits:
-        # Keeps batched result under 1MB
+        # This determinates number of messages per batch
         readBatchSize: 50
-        bufferMaxLength: 100000
       scale:
         disabled: true
-      # limits:
-      #   readBatchSize: 1
       udf:
         container:
           imagePullPolicy: Never
@@ -40,8 +35,6 @@ spec:
             value: "1"
           - name: PYTHONUNBUFFERED
             value: "1"
-          - name: SLEEP_TIME_SEC
-            value: "0"
           resources: &resources
             requests:
               cpu: 1
@@ -74,44 +67,22 @@ spec:
         log: {}
       
   edges:
-    # - from: in
-    #   to: even-or-odd-stream
-    # - from: even-or-odd-stream
-    #   to: even-sink
-    #   conditions:
-    #     tags:
-    #       values:
-    #         - even-tag
-    # - from: even-or-odd-stream
-    #   to: odd-sink
-    #   conditions:
-    #     tags:
-    #       operator: or
-    #       values:
-    #         - odd-tag
-    # - from: even-or-odd-stream
-    #   to: number-sink
-    #   conditions:
-    #     tags:
-    #       values:
-    #         - grouped
-
     - from: in
-      to: even-or-odd-urnary
-    - from: even-or-odd-urnary
+      to: even-or-odd-batch-stream
+    - from: even-or-odd-batch-stream
       to: even-sink
       conditions:
         tags:
           values:
             - even-tag
-    - from: even-or-odd-urnary
+    - from: even-or-odd-batch-stream
       to: odd-sink
       conditions:
         tags:
           operator: or
           values:
             - odd-tag
-    - from: even-or-odd-urnary
+    - from: even-or-odd-batch-stream
       to: number-sink
       conditions:
         tags:
