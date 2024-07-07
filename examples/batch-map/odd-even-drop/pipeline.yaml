@@ -25,36 +25,19 @@ spec:
         disabled: true
       udf:
         container:
-          imagePullPolicy: Never
           image: "quay.io/numaio/numaflow-python/batch-map/odd-even-drop:stable"
-          command:
-          - python
-          - /app/example_map_batch.py
           env:
           - name: MAX_THREADS
             value: "1"
           - name: PYTHONUNBUFFERED
             value: "1"
-          resources: &resources
-            requests:
-              cpu: 1
-              memory: 1Gi
-            limits:
-              cpu: 1
-              memory: 1Gi
-      containerTemplate:
-        resources:
-          <<: *resources
 
+    # A simple outputs to demonstrate routing per message and the grouped data
     - name: even-sink
       scale:
         min: 1
       sink:
-        # A simple log printing sink
         log: {}
-      containerTemplate:
-          resources:
-            <<: *resources
     - name: odd-sink
       scale:
         min: 1

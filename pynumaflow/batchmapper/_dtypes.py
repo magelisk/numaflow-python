@@ -116,6 +116,7 @@ class Datum:
     >>> t2 = datetime.fromtimestamp(1662998460, timezone.utc)
     >>> msg_headers = {"key1": "value1", "key2": "value2"}
     >>> d = Datum(
+    ...       id=msg_id,
     ...       keys=["test_key"],
     ...       value=payload,
     ...       event_time=t1,

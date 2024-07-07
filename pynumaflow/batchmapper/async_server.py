@@ -144,11 +144,10 @@ class BatchMapServer(BatchMapAsyncServerBase):
 
 class BatchMapUnaryServer(BatchMapAsyncServerBase):
     """
-    This creates a server instance to handle a stream of input data
-    and provide it to callers with identical interface to async_mapper.
-    This allows for a drop-in replacement for this capability. Doing this
-    may provide a performance boost by utilizing the a GRPC stream rather
-    than true GRPC unary to the numa client.
+    This creates a server instance to handle a stream of input data and provide it to callers
+    with identical interface to async_mapper's unary interface and functions as a drop-in
+    replacement. Using this may provide a performance boost by utilizing the a GRPC stream
+    rather than true GRPC unary communication to the numa client.
     """
 
     def __init__(
@@ -171,8 +170,8 @@ class BatchMapUnaryServer(BatchMapAsyncServerBase):
 
 class BatchMapGroupingServer(BatchMapAsyncServerBase):
     """
-    This creates a service instance to allow presenting messages either with a maximum number
-    or after a maximum amount of time receiving. Use cases for this are
+    This creates a server instance to force presenting messages either with a maximum number
+    or after a maximum amount of time receiving. Example use cases for this are:
     * Provide max messages to control memory or resource utilization independent of readBatchSize
     * Facilitate temporal data presentation. Useful particularly if input data is not sent in a
         relatively continuous rate so waiting for max_batch_size to be reached may introduce
@@ -180,16 +179,16 @@ class BatchMapGroupingServer(BatchMapAsyncServerBase):
     * Future enhancements to numaflow expect to provide constant streaming of data from ISB vs
         discrete readBatchSize chunks. This will guarantee data being provided to handler.
 
-    Performance note: The handler interface uses AsyncInterable as input to provide identical
-    drop-in support with BatchMapServer. However, the data is already present in memory by the
-    time this is called so async-for to access data will not provide any context switching and
-    data can be immediately grouped with `[x for async for x in datums]` as desired
-
     Additional Args:
       max_batch_size: Maximum number of messages to present to handler.
       timeout_sec: Number of seconds to wait for gathering messages. This time counting will
 
-    Whichever field is reached first will trigger handler to be called with which ever data is present.
+    Whichever field is reached first will trigger handler to be called with collected data
+
+    Performance note: The handler interface uses AsyncInterable as input to provide identical
+    drop-in support with BatchMapServer. However, the data is already present in memory by the
+    time the handler is called is called, so async-for to access data will not provide any aio
+    switching. Data can be immediately grouped with `[x for async for x in datums]` as desired.
     """
 
     def __init__(
