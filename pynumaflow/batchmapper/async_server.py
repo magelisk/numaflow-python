@@ -16,14 +16,14 @@ from pynumaflow.proto.batchmapper import batchmap_pb2_grpc
 from pynumaflow.shared.server import NumaflowServer, start_async_server
 
 
-class BatchMapAsyncServer(NumaflowServer):
+class BatchMapAsyncServerBase(NumaflowServer):
     """
     Class for a new Map Stream Server instance.
     """
 
     def __init__(
         self,
-        batch_mapper_instance: BatchMapCallable,
+        servicer: AsyncBatchMapServicer,
         sock_path=BATCH_MAP_SOCK_PATH,
         max_message_size=MAX_MESSAGE_SIZE,
         max_threads=MAX_THREADS,
@@ -43,7 +43,6 @@ class BatchMapAsyncServer(NumaflowServer):
         Example invocation:
            TODO(map-batch): add example here
         """
-        self.batch_mapper_instance: BatchMapCallable = batch_mapper_instance
         self.sock_path = f"unix://{sock_path}"
         self.max_threads = min(max_threads, int(os.getenv("MAX_THREADS", "4")))
         self.max_message_size = max_message_size
@@ -54,7 +53,7 @@ class BatchMapAsyncServer(NumaflowServer):
             ("grpc.max_receive_message_length", self.max_message_size),
         ]
 
-        self.servicer = AsyncBatchMapServicer(handler=self.batch_mapper_instance)
+        self.servicer = servicer
 
     def start(self):
         """
@@ -81,4 +80,23 @@ class BatchMapAsyncServer(NumaflowServer):
         _LOGGER.info("Starting Batch Map Server")
         await start_async_server(
             server, self.sock_path, self.max_threads, self._server_options, self.server_info_file
+        )
+
+
+class BatchMapAsyncServer(BatchMapAsyncServerBase):
+    def __init__(
+        self,
+        mapper_instance: BatchMapCallable,
+        sock_path=BATCH_MAP_SOCK_PATH,
+        max_message_size=MAX_MESSAGE_SIZE,
+        max_threads=MAX_THREADS,
+        server_info_file=BATCH_MAP_SERVER_INFO_FILE_PATH,
+    ):
+        servicer = AsyncBatchMapServicer(handler=mapper_instance)
+        super().__init__(
+            servicer,
+            sock_path=sock_path,
+            max_message_size=max_message_size,
+            max_threads=max_threads,
+            server_info_file=server_info_file,
         )

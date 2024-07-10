@@ -5,7 +5,7 @@ import grpc
 from google.protobuf import empty_pb2 as _empty_pb2
 
 from pynumaflow.batchmapper import Datum
-from pynumaflow.batchmapper._dtypes import BatchMapCallable
+from pynumaflow.batchmapper._dtypes import BatchMapCallable, BatchResponses
 from pynumaflow.proto.batchmapper import batchmap_pb2, batchmap_pb2_grpc
 from pynumaflow.shared.server import exit_on_error
 from pynumaflow.types import NumaflowServicerContext
@@ -51,7 +51,7 @@ class AsyncBatchMapServicer(batchmap_pb2_grpc.BatchMapServicer):
         self,
         request_iterator: AsyncIterable[batchmap_pb2.BatchMapRequest],
         context: NumaflowServicerContext,
-    ) -> batchmap_pb2.BatchMapResponse:
+    ) -> AsyncIterable[batchmap_pb2.BatchMapResponse]:
         """
         Applies a batch map function to a datum stream in streaming mode.
         The pascal case function name comes from the proto batchmap_pb2_grpc.py file.
@@ -59,7 +59,19 @@ class AsyncBatchMapServicer(batchmap_pb2_grpc.BatchMapServicer):
 
         # Create an async iterator from the request iterator
         datum_iterator = datum_generator(request_iterator=request_iterator)
+        try:
+            async for msg in self.present_data(datum_iterator, context):
+                yield msg
+        except Exception as err:
+            _LOGGER.critical("UDFError, re-raising the error", exc_info=True)
+            raise err
 
+    async def present_data(
+        self,
+        datum_iterator: AsyncIterable[batchmap_pb2.BatchMapRequest],
+        context: NumaflowServicerContext,
+    ) -> AsyncIterable[batchmap_pb2.BatchMapResponse]:
+        
         # iterate over the incoming requests, and keep appending to a request list
         # As the BatchMap interface expects a list of request elements
         # we read all the requests coming on the stream and keep appending them together
