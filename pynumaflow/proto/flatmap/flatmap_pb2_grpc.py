@@ -3,8 +3,8 @@
 import grpc
 import warnings
 
+from . import flatmap_pb2 as flatmap__pb2
 from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
-from . import mapstream_pb2 as mapstream__pb2
 
 GRPC_GENERATED_VERSION = '1.64.0'
 GRPC_VERSION = grpc.__version__
@@ -21,7 +21,7 @@ except ImportError:
 if _version_not_supported:
     warnings.warn(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + f' but the generated code in mapstream_pb2_grpc.py depends on'
+        + f' but the generated code in flatmap_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -31,7 +31,7 @@ if _version_not_supported:
     )
 
 
-class MapStreamStub(object):
+class FlatmapStub(object):
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -40,35 +40,24 @@ class MapStreamStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.MapStreamFn = channel.unary_stream(
-                '/mapstream.v1.MapStream/MapStreamFn',
-                request_serializer=mapstream__pb2.MapStreamRequest.SerializeToString,
-                response_deserializer=mapstream__pb2.MapStreamResponse.FromString,
-                _registered_method=True)
-        self.MapStreamBatchFn = channel.stream_stream(
-                '/mapstream.v1.MapStream/MapStreamBatchFn',
-                request_serializer=mapstream__pb2.MapStreamRequest.SerializeToString,
-                response_deserializer=mapstream__pb2.MapStreamResponse.FromString,
+        self.MapFn = channel.stream_stream(
+                '/flatmap.v1.Flatmap/MapFn',
+                request_serializer=flatmap__pb2.MapRequest.SerializeToString,
+                response_deserializer=flatmap__pb2.MapResponse.FromString,
                 _registered_method=True)
         self.IsReady = channel.unary_unary(
-                '/mapstream.v1.MapStream/IsReady',
+                '/flatmap.v1.Flatmap/IsReady',
                 request_serializer=google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-                response_deserializer=mapstream__pb2.ReadyResponse.FromString,
+                response_deserializer=flatmap__pb2.ReadyResponse.FromString,
                 _registered_method=True)
 
 
-class MapStreamServicer(object):
+class FlatmapServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def MapStreamFn(self, request, context):
-        """MapStreamFn applies a function to each request element and returns a stream.
+    def MapFn(self, request_iterator, context):
+        """MapFn applies a function to each map request element.
         """
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def MapStreamBatchFn(self, request_iterator, context):
-        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -81,63 +70,31 @@ class MapStreamServicer(object):
         raise NotImplementedError('Method not implemented!')
 
 
-def add_MapStreamServicer_to_server(servicer, server):
+def add_FlatmapServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'MapStreamFn': grpc.unary_stream_rpc_method_handler(
-                    servicer.MapStreamFn,
-                    request_deserializer=mapstream__pb2.MapStreamRequest.FromString,
-                    response_serializer=mapstream__pb2.MapStreamResponse.SerializeToString,
-            ),
-            'MapStreamBatchFn': grpc.stream_stream_rpc_method_handler(
-                    servicer.MapStreamBatchFn,
-                    request_deserializer=mapstream__pb2.MapStreamRequest.FromString,
-                    response_serializer=mapstream__pb2.MapStreamResponse.SerializeToString,
+            'MapFn': grpc.stream_stream_rpc_method_handler(
+                    servicer.MapFn,
+                    request_deserializer=flatmap__pb2.MapRequest.FromString,
+                    response_serializer=flatmap__pb2.MapResponse.SerializeToString,
             ),
             'IsReady': grpc.unary_unary_rpc_method_handler(
                     servicer.IsReady,
                     request_deserializer=google_dot_protobuf_dot_empty__pb2.Empty.FromString,
-                    response_serializer=mapstream__pb2.ReadyResponse.SerializeToString,
+                    response_serializer=flatmap__pb2.ReadyResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'mapstream.v1.MapStream', rpc_method_handlers)
+            'flatmap.v1.Flatmap', rpc_method_handlers)
     server.add_generic_rpc_handlers((generic_handler,))
-    server.add_registered_method_handlers('mapstream.v1.MapStream', rpc_method_handlers)
+    server.add_registered_method_handlers('flatmap.v1.Flatmap', rpc_method_handlers)
 
 
  # This class is part of an EXPERIMENTAL API.
-class MapStream(object):
+class Flatmap(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def MapStreamFn(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_stream(
-            request,
-            target,
-            '/mapstream.v1.MapStream/MapStreamFn',
-            mapstream__pb2.MapStreamRequest.SerializeToString,
-            mapstream__pb2.MapStreamResponse.FromString,
-            options,
-            channel_credentials,
-            insecure,
-            call_credentials,
-            compression,
-            wait_for_ready,
-            timeout,
-            metadata,
-            _registered_method=True)
-
-    @staticmethod
-    def MapStreamBatchFn(request_iterator,
+    def MapFn(request_iterator,
             target,
             options=(),
             channel_credentials=None,
@@ -150,9 +107,9 @@ class MapStream(object):
         return grpc.experimental.stream_stream(
             request_iterator,
             target,
-            '/mapstream.v1.MapStream/MapStreamBatchFn',
-            mapstream__pb2.MapStreamRequest.SerializeToString,
-            mapstream__pb2.MapStreamResponse.FromString,
+            '/flatmap.v1.Flatmap/MapFn',
+            flatmap__pb2.MapRequest.SerializeToString,
+            flatmap__pb2.MapResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -177,9 +134,9 @@ class MapStream(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/mapstream.v1.MapStream/IsReady',
+            '/flatmap.v1.Flatmap/IsReady',
             google_dot_protobuf_dot_empty__pb2.Empty.SerializeToString,
-            mapstream__pb2.ReadyResponse.FromString,
+            flatmap__pb2.ReadyResponse.FromString,
             options,
             channel_credentials,
             insecure,
